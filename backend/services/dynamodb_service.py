@@ -7,6 +7,7 @@ an in-memory store to keep local development convenient.
 
 import os
 import uuid
+import logging
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -15,6 +16,8 @@ import aioboto3
 import boto3  # Expose boto3 at module scope for tests that patch backend.services.dynamodb_service.boto3
 from backend.utils.hybrid_async import HybridAsyncDict
 from backend.utils.dynamodb_serialization import to_dynamodb_safe
+
+logger = logging.getLogger(__name__)
 
 
 class DynamoDBService:

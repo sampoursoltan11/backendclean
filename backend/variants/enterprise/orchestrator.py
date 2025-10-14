@@ -7,6 +7,7 @@ Routes requests to specialized domain agents using Strands 1.x patterns
 from typing import Dict, Any, AsyncIterator
 from datetime import datetime
 import re
+import logging
 
 from strands import Agent
 from strands.models import BedrockModel
@@ -17,6 +18,8 @@ from .agents.assessment_agent import AssessmentAgent
 from .agents.document_agent import DocumentAgent
 from .agents.question_agent import QuestionAgent
 from .agents.status_agent import StatusAgent
+
+logger = logging.getLogger(__name__)
 
 
 class EnterpriseOrchestratorAgent:

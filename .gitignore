@@ -40,6 +40,7 @@ build/
 
 # Logs and databases
 *.log
+logs/
 *.sqlite3
 *.db
 
@@ -56,6 +57,11 @@ docker-compose.override.yml
 *.tfstate.backup
 .aws/
 .aws-sam/
+
+# Runtime session and local storage directories
+sessions/
+backend/local_kb/
+backend/local_s3/
 
 # Misc
 .cache/

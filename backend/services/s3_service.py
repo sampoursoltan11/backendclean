@@ -12,11 +12,14 @@ import os
 from pathlib import Path
 from typing import Dict
 from datetime import datetime
+import logging
 
 import aioboto3
 import boto3  # Expose boto3 at module scope for tests that patch backend.services.s3_service.boto3
 from backend.core.config import get_settings
 from backend.utils.hybrid_async import HybridAsyncDict
+
+logger = logging.getLogger(__name__)
 
 # Use configurable local directory
 settings = get_settings()
