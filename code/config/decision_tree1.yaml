@@ -1,0 +1,1263 @@
+assessment:
+  name: "BHP Technology & Application Services Assessment"
+  version: "1.0"
+  description: "Decision tree assessment for technology and application services covering Third Party, Data Privacy, AI, and Intellectual Property risks"
+
+navigation_rules:
+  - L1 qualifying questions are always shown first
+  - L2 questions appear only when triggered by L1 responses
+  - L3 questions appear only after their parent L2 questions are answered
+  - L4 questions appear only after their parent L3 questions are answered
+  - Skip logic prevents questions from being shown based on specific answer conditions
+  - Depends_on logic shows questions only when dependencies are met
+
+qualifying_questions:
+  - id: "C-01"
+    level: "L1"
+    type: "Qualifying"
+    question: "Select Technology & Application Services to be assessed"
+    response_type: "free-text"
+    required: true
+    
+  - id: "C-02"
+    level: "L1"
+    type: "Qualifying"
+    question: "Will ANY Third Parties be involved i.e will Third-parties be owning, designing, deploying or operating the solution?"
+    response_type: "Yes/No"
+    required: true
+    on_yes:
+      action: "show_all_questions"
+      risk_area: "Third Party"
+      level: "L2"
+      
+  - id: "C-03"
+    level: "L1"
+    type: "Qualifying"
+    question: "Will your change or initiative do any of the following: introduce a new process or a new technology product, develop a digital solution or develop software?"
+    response_type: "Yes/No"
+    required: true
+    on_yes:
+      action: "show_all_questions"
+      risk_area: "Intellectual Property"
+      level: "L2"
+      
+  - id: "C-04"
+    level: "L1"
+    type: "Qualifying"
+    question: "Is your change or initiative going to involve personal data?"
+    response_type: "Yes/No"
+    required: true
+    on_yes:
+      action: "show_all_questions"
+      risk_area: "Data Privacy"
+      level: "L2"
+      
+  - id: "C-05"
+    level: "L1"
+    type: "Qualifying"
+    question: "Does your change or initiative use AI?"
+    response_type: "Yes/No"
+    required: true
+    on_yes:
+      action: "show_all_questions"
+      risk_area: "Artificial Intelligence"
+      level: "L2"
+      
+  - id: "C-06"
+    level: "L1"
+    type: "Qualifying"
+    question: "Will your change or initiative involve new vendor systems or integrations with third-party vendors?"
+    response_type: "Yes/No"
+    required: true
+    on_yes:
+      action: "show_all_questions"
+      risk_area: "Intellectual Property"
+      level: "L2"
+
+risk_areas:
+  third_party:
+    name: "Third Party Risk"
+    triggered_by: "C-02"
+    questions:
+      - id: "TP-01"
+        level: "L2"
+        question: "Vendor Supplier name"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-02"
+        level: "L2"
+        question: "Vendor Representative Contract Details (Please Provide Full name, Title and Email address)"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-03"
+        level: "L2"
+        question: "Vendor Contract name"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-04"
+        level: "L2"
+        question: "Vendor Contract Start Date"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-05"
+        level: "L2"
+        question: "Vendor Contract End Date"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-06"
+        level: "L2"
+        question: "Has the contract or PO being signed with the vendor for this engagement"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-07"
+        level: "L2"
+        question: "Purchasing Area: ( Global Functions ) Please selection this option ONLY if your region is Global Functions"
+        response_type: "free-text"
+        required: false
+        
+      - id: "TP-08"
+        level: "L2"
+        question: "Contract Application Area ( Global Functions ) Please selection this option ONLY if your region is Global Functions"
+        response_type: "free-text"
+        required: false
+        
+      - id: "TP-09"
+        level: "L2"
+        question: "Supply Specialist"
+        response_type: "free-text"
+        required: false
+        
+      - id: "TP-10"
+        level: "L2"
+        question: "Please provide the name of the Application you are onboarding:"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-11"
+        level: "L2"
+        question: "Description: of the Engagement"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-12"
+        level: "L2"
+        question: "Select Procurement Category"
+        response_type: "free-text"
+        required: true
+        
+      - id: "TP-13"
+        level: "L2"
+        question: "Supplier Web Page"
+        response_type: "free-text"
+        required: false
+        
+      - id: "TP-14"
+        level: "L2"
+        question: "Will the Vendor's systems be provided with direct access to BHP systems?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-15"
+        level: "L2"
+        question: "Will the Vendor be providing specialized technologies?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-16"
+        level: "L2"
+        question: "Will the Vendor be providing technology products / services as part of the engagement?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-17"
+        level: "L2"
+        question: "Will the Vendor be holding or processing information which is non-personal but Confidential or Highly Confidential?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-18"
+        level: "L2"
+        question: "Will the Vendor be holding or processing any Sensitive Personal Information?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-19"
+        level: "L2"
+        question: "Will the Vendor be holding or processing large volumes of BHP Personal Data?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-20"
+        level: "L2"
+        question: "Will the Vendor be providing a software solution?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-21"
+        level: "L2"
+        question: "Is the availability of the software solution considered critical? i.e. will availability of the application significantly impact BHP?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "TP-22"
+        level: "L2"
+        question: "If the Vendor will have direct access to BHP systems where will the data be stored:"
+        response_type: "free-text"
+        required: false
+        depends_on:
+          question_id: "TP-14"
+          answer: "Yes"
+
+  data_privacy:
+    name: "Data Privacy Risk"
+    triggered_by: "C-04"
+    questions:
+      - id: "DP-01"
+        level: "L2"
+        question: "Does this project/change/system/process involve monitoring or tracking?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-02"
+        level: "L2"
+        question: "Does this project/change/system/process involve automated decision-making or generative AI?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["DP-03", "DP-04", "DP-05"]
+          
+      - id: "DP-03"
+        level: "L3"
+        question: "What are the personal information or sensitive information which the AI system will use/have used across its lifecycle (including data creation, data acquisition, model development/training, evaluation, deployment, model input and output)?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "DP-02"
+          answer: "Yes"
+        
+      - id: "DP-04"
+        level: "L3"
+        question: "Will the AI system be used in a way that could categorise or treat individuals or groups of individuals differently from other groups of individuals?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "DP-02"
+          answer: "Yes"
+        
+      - id: "DP-05"
+        level: "L3"
+        question: "Who is reviewing the outputs from the AI system/algorithm prior to use?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "DP-02"
+          answer: "Yes"
+        
+      - id: "DP-06"
+        level: "L2"
+        question: "Does this project/change/system/process involve a large amount of personal information?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-07"
+        level: "L2"
+        question: "Does this project/change/system/process involve Personal Information being transferred from the following countries: China, United Kingdom, Brazil?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-08"
+        level: "L2"
+        question: "Provide a brief summary of the data processing activity and its purpose"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-09"
+        level: "L2"
+        question: "Can you explain to the public how the project's proposed usage of data is safe, reliable, trustworthy and beneficial to the diverse community and individuals?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-10"
+        level: "L2"
+        question: "What types of Personal Information will be processed?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-11"
+        level: "L2"
+        question: "How will the Personal Information be processed (i.e. what will the processing activity involve)?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-12"
+        level: "L2"
+        question: "How will the Personal Information be collected / sourced?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-13"
+        level: "L2"
+        question: "Approximately how many Individuals will be affected?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-14"
+        level: "L2"
+        question: "Where will the affected Individuals be located?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-15"
+        level: "L2"
+        question: "Where will the people and/or systems doing the processing activity be located?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-16"
+        level: "L2"
+        question: "Will the data be shared with or processed by third parties?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-17"
+        level: "L2"
+        question: "How are the Individuals being notified about BHP's collection and processing of their Personal Information?"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-18"
+        level: "L2"
+        question: "Are there other options for achieving the change / project objectives that do not involve processing Personal Information?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["DP-19"]
+          
+      - id: "DP-19"
+        level: "L2"
+        question: "If YES, why have the other options not been pursued?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "DP-18"
+          answer: "Yes"
+        
+      - id: "DP-20"
+        level: "L2"
+        question: "Check the proposed processing activity is reflected in the Global Privacy Notice for BHP Workers, BHP Workplace Technology Monitoring Notice, Privacy Policy and/or Cookies Policy. Add comments"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-21"
+        level: "L2"
+        question: "Verify that only the minimum amount of relevant Personal Information is being collected and stored. This will include using anonymised and/or aggregated data where possible. Add comments"
+        response_type: "free-text"
+        required: true
+        
+      - id: "DP-22"
+        level: "L2"
+        question: "New Access Is granted only to approved persons based on business requirement and a need-to-know basis"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-23"
+        level: "L2"
+        question: "Access is removed where a person changes roles or leaves the organisation"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-24"
+        level: "L2"
+        question: "All access must be reviewed at least quarterly to verify if a person's access to Personal Information is appropriate"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-25"
+        level: "L2"
+        question: "Document disposal requirements are implemented in accordance with the relevant data retention schedules"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-26"
+        level: "L2"
+        question: "Confirm that mechanisms exist to ensure the Personal Information being processed is accurate and can be kept up to date."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-27"
+        level: "L2"
+        question: "Verify the Technology Security Assessment (TSA) process has been initiated or completed and is up-to-date to ensure technical safeguards are in place to protect Personal Information"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-28"
+        level: "L2"
+        question: "Controls are implemented for non-production (test) data.Personal Information fields and are hashed, masked, replaced or obfuscated in Test and/or Development environments."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-29"
+        level: "L2"
+        question: "Testing performed to ensure technology solutions operate as intended (see help text)"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-30"
+        level: "L2"
+        question: "Verify that information handling requirements are implemented to classify and protect Personal Information including the requirements for creating, printing, sending, storing, and deleting (physical and electronic) information."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "DP-31"
+        level: "L2"
+        question: "Confirm with your Procurement/Supply contact that a Data Security and Privacy Addendum (DSPA) is included/appended to the contract between BHP and the third party vendor"
+        response_type: "Yes/No"
+        required: true
+
+  artificial_intelligence:
+    name: "AI Risk"
+    triggered_by: "C-05"
+    questions:
+      - id: "AI-01"
+        level: "L2"
+        question: "Select the Business Application to be assessed"
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-02"
+        level: "L2"
+        question: "Business Application Owner"
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-03"
+        level: "L2"
+        question: "Technology Application Owner"
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-04"
+        level: "L2"
+        question: "Application Description"
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-05"
+        level: "L2"
+        question: "Objective - What is the main goal or function of the AI system? Describe the problem it aims to solve or the task it is designed to perform."
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-06"
+        level: "L2"
+        question: "Scope - Who are the intended users of the AI system? Specify the target audience or user base."
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-07"
+        level: "L2"
+        question: "Context - In what environment or setting will the AI system be deployed? Mention any specific conditions or scenarios where the system will be used."
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-08"
+        level: "L2"
+        question: "Expected outcomes - what are the anticipated benefits or results of using the AI System"
+        response_type: "free-text"
+        required: true
+        
+      - id: "AI-09"
+        level: "L2"
+        question: "Is there the potential for your system to perpetuate or amplify societal biases?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-10"]
+          
+      - id: "AI-10"
+        level: "L3"
+        question: "What measures are in place to address potential issues related to societal bias?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-09"
+          answer: "Yes"
+        
+      - id: "AI-11"
+        level: "L2"
+        question: "Could the AI system have a disproportionate impact on vulnerable groups or exacerbate inequalities?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-12"]
+          
+      - id: "AI-12"
+        level: "L3"
+        question: "What measures are in place to prevent disproportionate impacts on vulnerable groups and to promote fairness and equality?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-11"
+          answer: "Yes"
+        
+      - id: "AI-13"
+        level: "L2"
+        question: "Does a third-party vendor of the AI system have access to BHP input data, or the output data associated with BHP's use of the AI system?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-14", "AI-15"]
+          
+      - id: "AI-14"
+        level: "L3"
+        question: "What measures are in place to address third party vendor access to BHP data?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-13"
+          answer: "Yes"
+        
+      - id: "AI-15"
+        level: "L3"
+        question: "Is the vendor's right to access BHP data limited to providing the AI system to BHP?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "AI-13"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-16"]
+          
+      - id: "AI-16"
+        level: "L4"
+        question: "What measures are in place to address third party vendor access to BHP data?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-15"
+          answer: "No"
+        
+      - id: "AI-17"
+        level: "L2"
+        question: "Is the vendor prohibited from using BHP data (input or output) to train an AI model?"
+        response_type: "Yes/No"
+        required: true
+        on_yes:
+          action: "skip_questions"
+          skip_questions: ["AI-16"]
+          
+      - id: "AI-18"
+        level: "L2"
+        question: "Could vulnerabilities or inaccuracies in the AI system, including issues with data integrity, result in incorrect decisions, operational disruptions, or harm to individuals or communities?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-19"]
+          
+      - id: "AI-19"
+        level: "L3"
+        question: "What measures are in place to address potential issues vulnerabilities or inaccuracies?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-18"
+          answer: "Yes"
+        
+      - id: "AI-20"
+        level: "L2"
+        question: "Is there an ongoing operational process to monitor and maintain the AI system"
+        response_type: "Yes/No"
+        required: true
+        on_yes:
+          action: "skip_questions"
+          skip_questions: ["AI-33"]
+          
+      - id: "AI-21"
+        level: "L2"
+        question: "Can the predictions, recommendations or automated decisions of your solution be adequately explained?"
+        response_type: "Yes/No"
+        required: true
+        on_yes:
+          action: "skip_questions"
+          skip_questions: ["AI-22"]
+          
+      - id: "AI-22"
+        level: "L3"
+        question: "What measures are in place to address potential issues related to transparency and explainability?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-21"
+          answer: "No"
+        
+      - id: "AI-23"
+        level: "L2"
+        question: "Does the solution have the potential to generate outputs that may be covered under a third-party's copyright?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-24"]
+          
+      - id: "AI-24"
+        level: "L3"
+        question: "What measures are in place to address potential issues related to copyright infringement?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-23"
+          answer: "Yes"
+        
+      - id: "AI-25"
+        level: "L2"
+        question: "Is there a risk that the AI system's use could limit the ability of users to make independent decisions?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-26"]
+          
+      - id: "AI-26"
+        level: "L3"
+        question: "What measures are in place to provide sufficient human autonomy?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-25"
+          answer: "Yes"
+        
+      - id: "AI-27"
+        level: "L2"
+        question: "Is there sufficient human oversight and control over the AI system?"
+        response_type: "Yes/No"
+        required: true
+        on_yes:
+          action: "skip_questions"
+          skip_questions: ["AI-28"]
+          
+      - id: "AI-28"
+        level: "L3"
+        question: "What measures are in place to address potential issues related to human oversight?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-27"
+          answer: "No"
+        
+      - id: "AI-29"
+        level: "L2"
+        question: "Could the AI system be misused to harm individuals, communities, or the environment?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-30"]
+          
+      - id: "AI-30"
+        level: "L3"
+        question: "What preventive measures are in place to avoid misuse of the AI system and protect individuals, communities, and the environment?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-29"
+          answer: "Yes"
+        
+      - id: "AI-31"
+        level: "L2"
+        question: "Could the intended use of the AI system harm individuals, communities, or the environment?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["AI-32"]
+          
+      - id: "AI-32"
+        level: "L3"
+        question: "What measures are in place to address these harms?"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-31"
+          answer: "Yes"
+        
+      - id: "AI-33"
+        level: "L3"
+        question: "Provide details on why operational processes to monitor and maintain the AI system will not be in place"
+        response_type: "free-text"
+        required: true
+        depends_on:
+          question_id: "AI-20"
+          answer: "No"
+
+  intellectual_property:
+    name: "IP Risk"
+    triggered_by: ["C-03", "C-06"]
+    questions:
+      - id: "IP-01"
+        level: "L2"
+        question: "Are you undertaking this IPDA at the start or end of your Project; as part of a regular or ongoing requirement; or due to a change in circumstance?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "IP-02"
+        level: "L2"
+        question: "My project is in an Asset, Function or sub-functional group that requires me to complete the IPDA (e.g. under the APMF)."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "IP-03"
+        level: "L2"
+        question: "My project is developing a new or improved product, method or process (including changing or optimising an existing BHP product, method or process)."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 4.01"]
+          
+      - id: "IP-04"
+        level: "L2"
+        question: "My project is developing software."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.01"]
+          
+      - id: "IP-05"
+        level: "L2"
+        question: "My project involves external contractors who are creating deliverables that will be used by BHP."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 2.06", "Q 2.07", "Q 2.08", "Q 2.09", "Q 2.10", "Q 2.11", "Q 2.12", "Q 2.13", "Q 2.14"]
+          
+      - id: "IP-06"
+        level: "L2"
+        question: "My project will access, consume, process or generate data, or share data with others."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 6.07"]
+          
+      - id: "IP-07"
+        level: "L2"
+        question: "My project will create plans, schematics, drawings or algorithms that will need to be used by BHP in the future."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "IP-08"
+        level: "L2"
+        question: "A reason for my Project, or an important deliverable of my Project, is the creation of new IP."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "IP-09"
+        level: "L2"
+        question: "My project is developing or buying a system that includes an AI component."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.11", "Q 3.12"]
+          
+      - id: "IP-10"
+        level: "L2"
+        question: "MFL"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 4.04"]
+          
+      - id: "Q 1.02"
+        level: "L3"
+        question: "Have all Project team members completed all required IP training or had it allocated to them to be completed within 3 months of joining the Project?"
+        response_type: "Yes/No"
+        required: true
+        parent_question: "IP-01"
+        
+      - id: "Q 2.01"
+        level: "L3"
+        question: "Do you have an onboarding process that reminds incoming personnel of: - their confidentiality obligations under their contracts; and - the need to respect confidentiality of third party materials (including by not bringing materials from past employers to BHP)?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 2.02"
+        level: "L3"
+        question: "Does your team have a clear procedure for labelling and storing confidential documents and information which complies with BHP's Data Classification and Protection Framework?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 2.04"
+        level: "L3"
+        question: "Do you have an off-boarding process for all personnel to: 1. Remind them of their obligations of confidentiality; and 2. Confirm the personnel no longer have in their possession any confidential materials that they no longer require for BHP work?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 2.05"
+        level: "L3"
+        question: "Will Project team members be handling information that would, if publicly disclosed, significantly impair our ability to achieve the Project's goals or otherwise cause BHP significant loss or reputational harm?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 2.06"
+        level: "L3"
+        question: "Are any contractors working in the Project team engaged under contract terms that are not BHP standard terms (contract or PO)?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-05"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 2.14"]
+          
+      - id: "Q 2.07"
+        level: "L3"
+        question: "Were contractors engaged because of specific knowledge or expertise that is directly relevant to this Project (e.g. had worked on a similar Project at a different company before BHP)?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-05"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 2.13"]
+          
+      - id: "Q 2.08"
+        level: "L3"
+        question: "Will any contractors bring information into BHP that needs to be isolated from other suppliers or contractors?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-05"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 2.12", "Q 2.13"]
+          
+      - id: "Q 2.09"
+        level: "L3"
+        question: "Are all contractors working within the BHP environment, through the use of BHP laptops, devices or virtual networks?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-05"
+          answer: "Yes"
+          
+      - id: "Q 2.10"
+        level: "L3"
+        question: "As you have identified a higher risk, do you have in place a team Information Protocol that is reviewed every 12 months?"
+        response_type: "Yes/No"
+        required: true
+        skip_if:
+          - question_id: "Q 2.05"
+            answer: "No"
+          - question_id: "Q 2.09"
+            answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 2.11"]
+          
+      - id: "Q 2.11"
+        level: "L3"
+        question: "Has the team Information Protocol been reviewed and endorsed by Legal?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 2.10"
+          answer: "Yes"
+        
+      - id: "Q 2.12"
+        level: "L3"
+        question: "As you have information that must be restricted from access by certain contractors / suppliers, are there physical or technological controls used to protect access to information or data handled by the Project team?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 2.08"
+          answer: "Yes"
+        
+      - id: "Q 2.13"
+        level: "L3"
+        question: "As you have identified contractors bringing sensitive information to BHP, do you require all incoming personnel to: - provide a written confirmation that they have not brought, and will not bring, any third party materials without permission; and - acknowledges they understand their confidentiality obligations to BHP (and any special rules put in place for the Project team)?"
+        response_type: "Yes/No"
+        required: true
+        show_if_any:
+          - question_id: "Q 2.07"
+            answer: "Yes"
+          - question_id: "Q 2.08"
+            answer: "Yes"
+        
+      - id: "Q 2.14"
+        level: "L3"
+        question: "As you have identified contractors on non-BHP standard terms, have you checked the contract(s) between BHP and the supplier of those contractors to confirm that BHP's confidential information is protected and cannot be used by that provider for its own products or services?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 2.06"
+          answer: "Yes"
+        
+      - id: "Q 3.01"
+        level: "L3"
+        question: "Is your Project developing software that may incorporate open source software components?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-04"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.02", "Q 3.03", "Q 3.04"]
+          
+      - id: "Q 3.02"
+        level: "L3"
+        question: "Do you have a process in place to ensure your team complies with the Technology: Open Source Software Standard?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.01"
+          answer: "Yes"
+        
+      - id: "Q 3.03"
+        level: "L3"
+        question: "Are you aware of any open source software components incorporated into the software being developed by your Project that are on the Red or Deny lists on the Technology Standard for Open Source Software?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.01"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.04"]
+          
+      - id: "Q 3.04"
+        level: "L3"
+        question: "Do you have all required approvals for any open source software incorporated into software that is being developed in your Project?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.03"
+          answer: "Yes"
+        
+      - id: "Q 3.05"
+        level: "L3"
+        question: "Have you completed the AI Risk Assessment tool available at the AI Hub?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-09"
+          answer: "Yes"
+        
+      - id: "Q 3.06"
+        level: "L3"
+        question: "Have you checked the new system complies with any applicable AI copyright controls specified by the AI Hub?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-09"
+          answer: "Yes"
+        
+      - id: "Q 3.07"
+        level: "L3"
+        question: "Will your Project rely on the use of any High-Risk Materials? High-Risk Materials are any key inputs to the Project in which third parties may have IP rights (e.g. a Supplier who created the input for BHP)."
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.08", "Q 3.11"]
+          
+      - id: "Q 3.08"
+        level: "L3"
+        question: "Have you already started using any High-Risk Materials in your Project?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.07"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.09"]
+          
+      - id: "Q 3.09"
+        level: "L3"
+        question: "Are you satisfied that BHP: - has permission to use the High-Risk Materials already in use, as needed for the Project? and - is aware of any conditions on the use of those High-Risk Materials?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.08"
+          answer: "Yes"
+        
+      - id: "Q 3.10"
+        level: "L3"
+        question: "Will your Project rely on the use of any High-Risk Data? High risk data is any data required for your project that may be subject to conditions on BHP's ability to use the data. It includes: - data from non-BHP sensors or equipment, especially any OEM machinery; - large data-sets for 'training' machine learning algorithms; and - enriched data sets, where the enrichment / data processing is done by an external provider or platform?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 3.12"]
+          
+      - id: "Q 3.11"
+        level: "L3"
+        question: "As your project will use High-Risk Materials, do you have in place a routine for verifying that you have the necessary rights to use the High-Risk Materials introduced into your Project. This routine or process should include: 1. Identifying each input. 2. Checking the source of the input to confirm our ability to use it, and any conditions. 3. Labelling and storing input in an identifiable way. 4. Ensuring Project team compliance with any conditions."
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.07"
+          answer: "Yes"
+        
+      - id: "Q 3.12"
+        level: "L3"
+        question: "As your Project will use High-Risk Data, do you have in place a routine or process for verifying that we have a right to use any High-Risk Data introduced into your Project (for the purposes for which we use them)? This routine or process should include: 1. Identifying each input. 2. Checking the source of the input to confirm our ability to use it, and any conditions. 3. Labelling and storing input in an identifiable way. 4. Ensuring Project team compliance with any conditions."
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 3.10"
+          answer: "Yes"
+        
+      - id: "Q 4.01"
+        level: "L3"
+        question: "Will your Project create a new product or process, or change a process?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-03"
+          answer: "Yes"
+        
+      - id: "Q 4.02"
+        level: "L3"
+        question: "Is anyone in your Project team aware of any patents covering key items, methods or processes required for your Project (through previous FTO searches or otherwise)?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 4.04"]
+          
+      - id: "Q 4.03"
+        level: "L3"
+        question: "As you have identified a potential material risk, have you contacted Legal to consider and implement any freedom to operate searches? If not, but you intend to, please answer 'No'."
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 4.04"
+        level: "L3"
+        question: "As you have identified patents that may be problematic, have you already engaged with Legal to consider the risk and, if necessary, adopted any mitigation strategies to reduce the risk presented by those patents?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 4.02"
+          answer: "Yes"
+        
+      - id: "Q 5.01"
+        level: "L3"
+        question: "Does your Project team engage with Procurement, and use standard BHP terms (or approved alternatives) when contracting with all external partners?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.02"
+        level: "L3"
+        question: "Do you Project Plans consider IP protection?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.03"
+        level: "L3"
+        question: "Will external partners create new materials for your Project that will be critical to the Project achieving its outcomes (e.g. materials that are core to the value proposition, and difficult or time consuming to replace)?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.04"
+        level: "L3"
+        question: "Would it be problematic if you were locked in to using the current external partner(s) for the entire life of this Project and the Deliverables created?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.05"
+        level: "L3"
+        question: "Will your Project distribute or otherwise provide access to BHP data sets across the business?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 5.11"]
+          
+      - id: "Q 5.06"
+        level: "L3"
+        question: "Will external collaborators be required to access, use or manipulate materials provided by other suppliers or collaborators?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.07"
+        level: "L3"
+        question: "Will external collaborators be accessing, storing or manipulating our data?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.08"
+        level: "L3"
+        question: "Is the value of your Project materially dependent on BHP having exclusive rights to use the developed Project?"
+        response_type: "Yes/No"
+        required: true
+        
+      - id: "Q 5.09"
+        level: "L3"
+        question: "As you have identified material Project IP or IP being developed by suppliers, have you confirmed that BHP either owns, or has a sufficiently broad licence to use (which permits BHP to modify, amend, improve the IP, including with the use of third party contractors), all key IP required for the life of this Project?"
+        response_type: "Yes/No"
+        required: true
+        skip_if:
+          - question_id: "Q 5.03"
+            answer: "Yes"
+          - question_id: "Q 5.04"
+            answer: "Yes"
+        
+      - id: "Q 5.10"
+        level: "L3"
+        question: "Does your Project have in place a routine or process for sharing any BHP or third party materials (including data) which includes: 1. Identifying each item to be shared. 2. Checking the source of the item to confirm our ability to use share it, and any conditions. 3. Documenting where and how materials are shared. 4. Ensuring compliance with any conditions."
+        response_type: "Yes/No"
+        required: true
+        skip_if:
+          - question_id: "Q 5.06"
+            answer: "Yes"
+          - question_id: "Q 5.07"
+            answer: "Yes"
+        
+      - id: "Q 5.11"
+        level: "L3"
+        question: "Have you checked with the Data Owner whether there are any conditions you should be aware of for the data you are sharing? If you are not sure who the Data Owner is, check with the Data Strategy team."
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 5.05"
+          answer: "Yes"
+        
+      - id: "Q 6.01"
+        level: "L3"
+        question: "Data - Will your Project be a Data Producer or Data Consumer?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-06"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 6.02"]
+          
+      - id: "Q 6.02"
+        level: "L3"
+        question: "Have you complied with all relevant sections of the Data Global Standard, including in relation to 'Managing and using our Data' and 'Safeguarding our Data'?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 6.01"
+          answer: "Yes"
+        
+      - id: "Q 6.03"
+        level: "L3"
+        question: "Privacy - Will your Project collect, process, store or output Personal Information (this would include any Project that introduces increased monitoring or surveillance of individuals)?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 6.04"]
+          
+      - id: "Q 6.04"
+        level: "L3"
+        question: "Has your Project completed a Data Protection Impact Assessment (DPIA) with BHP's Data Privacy and Protection office (DPPO)?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 6.03"
+          answer: "Yes"
+        
+      - id: "Q 6.05"
+        level: "L3"
+        question: "Competition - Will your Project share Competitively Sensitive Information (as defined in the Guidance Note) outside of BHP, or include algorithms or machine learning programs that provide recommendations or implement actions that might influence the procurement of goods/services or pricing?"
+        response_type: "Yes/No"
+        required: true
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 6.06"]
+          
+      - id: "Q 6.06"
+        level: "L3"
+        question: "Have you contacted the Competition Forum, to confirm that your Project complies with Business Conduct Global Standard in respect of competition law and competitively sensitive information, and has implemented any strategies to manage any specific competition law risks?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 6.05"
+          answer: "Yes"
+        
+      - id: "Q 6.07"
+        level: "L3"
+        question: "Export controls - Will your Project create any software that: (a) contains or uses encryption; or (b) has a primary function of 'information security', digital communications or networking systems, computers or information storage or processing?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "IP-06"
+          answer: "Yes"
+        on_no:
+          action: "skip_questions"
+          skip_questions: ["Q 6.08"]
+          
+      - id: "Q 6.08"
+        level: "L3"
+        question: "Have you contacted Ethics & Compliance (marked to the attention of Elika Taghizadeh (elika.taghizadeh@bhp.com) to assess whether your software may be captured by any export controls?"
+        response_type: "Yes/No"
+        required: true
+        depends_on:
+          question_id: "Q 6.07"
+          answer: "Yes"
+
+ai_agent_instructions:
+  introduction: "Welcome to the BHP Technology & Application Services Assessment. I'll guide you through a series of questions to assess risks related to your technology change or initiative. Let's start with some qualifying questions."
+  
+  flow:
+    - Start with all L1 qualifying questions (C-01 through C-06)
+    - Based on Yes responses, activate relevant risk area question sets
+    - Present L2 questions for activated risk areas
+    - Show L3 questions only after their parent L2 question is answered
+    - Show L4 questions only after their parent L3 question is answered
+    - Apply skip logic to hide irrelevant questions
+    - Apply depends_on logic to show conditional questions
+  
+  response_handling:
+    - For free-text responses, accept and store the user's input
+    - For Yes/No responses, trigger appropriate navigation logic
+    - Track all responses for final assessment report
+    - Flag unanswered required questions
+  
+  validation:
+    - Ensure all required questions in active risk areas are answered
+    - Validate that conditional questions appear only when dependencies are met
+    - Confirm skip logic is properly applied
+    - Check that hierarchical navigation (L1→L2→L3→L4) is maintained
+  
+  completion:
+    - Summarize all risk areas assessed
+    - List any flagged concerns or required follow-ups
+    - Provide assessment completion status
+    - Generate final report with all responses
+
+metadata:
+  version: "1.0"
+  last_updated: "2024"
+  source: "bhp-dt.xlsx"
+  description: "BHP Decision Tree Assessment for Technology & Application Services covering Third Party Risk, Data Privacy Risk, AI Risk, and Intellectual Property Risk"
+  total_qualifying_questions: 6
+  total_risk_areas: 4
+  contact_info:
+    ethics_compliance: "elika.taghizadeh@bhp.com"

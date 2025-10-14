@@ -1,0 +1,367 @@
+assessment:
+  name: BHP Technology & Application Services Assessment
+  version: Demo
+  description: Decision tree assessment for technology and application services covering
+    Third Party, Data Privacy, AI, and Intellectual Property risks
+navigation_rules:
+- L1 qualifying questions are always shown first
+- L2 questions appear only when triggered by L1 responses
+- L3 questions appear only after their parent L2 questions are answered
+- Skip logic prevents questions from being shown based on specific answer conditions
+- Depends_on logic shows questions only when dependencies are met
+qualifying_questions:
+- id: C-01
+  level: L1
+  type: Qualifying
+  question: Select Technology & Application Services to be assessed
+  response_type: free-text
+  required: true
+- id: C-02
+  level: L1
+  type: Qualifying
+  question: Will ANY Third Parties be involved i.e will Third-parties be owning, designing,
+    deploying or operating the solution?
+  response_type: Yes/No
+  required: true
+  on_yes:
+    action: show_all_questions
+    risk_area: Third Party
+    level: L2
+- id: C-03
+  level: L1
+  type: Qualifying
+  question: 'Will your change or initiative do any of the following: introduce a new
+    process or a new technology product, develop a digital solution or develop software?'
+  response_type: Yes/No
+  required: true
+  on_yes:
+    action: show_all_questions
+    risk_area: Intellectual Property
+    level: L2
+- id: C-04
+  level: L1
+  type: Qualifying
+  question: Is your change or initiative going to involve personal data?
+  response_type: Yes/No
+  required: true
+  on_yes:
+    action: show_all_questions
+    risk_area: Data Privacy
+    level: L2
+- id: C-05
+  level: L1
+  type: Qualifying
+  question: Does your change or initiative use AI?
+  response_type: Yes/No
+  required: true
+  on_yes:
+    action: show_all_questions
+    risk_area: Artificial Intelligence
+    level: L2
+- id: C-06
+  level: L1
+  type: Qualifying
+  question: Will your change or initiative involve new vendor systems or integrations
+    with third-party vendors?
+  response_type: Yes/No
+  required: true
+  on_yes:
+    action: show_all_questions
+    risk_area: Intellectual Property
+    level: L2
+risk_areas:
+  third_party:
+    name: Third Party Risk
+    questions:
+    - id: TP-01
+      level: L2
+      comments: Needs to allow for multiple Vendors, Question Set needs to be asked
+        for each Vendor entered
+      question: Vendor Supplier name
+      response_type: free-text
+      required: true
+    - id: TP-02
+      level: L2
+      question: Vendor Contract name
+      response_type: free-text
+      required: true
+    - id: TP-03
+      level: L2
+      question: 'Description: of the Engagement'
+      response_type: free-text
+      required: true
+    - id: TP-04
+      level: L2
+      question: Supplier Web Page
+      response_type: free-text
+      required: false
+    - id: TP-05
+      level: L2
+      question: Will the Vendor's systems be provided with direct access to BHP systems?
+      response_type: Yes/No
+      required: true
+    - id: TP-06
+      level: L2
+      question: Will the Vendor be holding or processing information which is non-personal
+        but Confidential or Highly Confidential?
+      response_type: Yes/No
+      required: true
+    - id: TP-07
+      level: L2
+      question: Is the availability of the software solution considered critical?
+        i.e. will availability of the application significantly impact BHP?
+      response_type: Yes/No
+      required: true
+    - id: TP-08
+      level: L2
+      question: 'If the Vendor will have direct access to BHP systems where will the
+        data be stored:'
+      response_type: free-text
+      required: false
+  data_privacy:
+    name: Data Privacy Risk
+    questions:
+    - id: DP-01
+      level: L2
+      question: Does this project/change/system/process involve monitoring or tracking?
+      response_type: Yes/No
+      required: true
+    - id: DP-02
+      level: L2
+      show_questions:
+      - DP-03
+      question: Are there other options for achieving the change / project objectives
+        that do not involve processing Personal Information?
+      response_type: Yes/No
+      required: true
+    - id: DP-03
+      level: L3
+      depends_on:
+        question_id: DP-02
+        answer: 'Yes'
+      question: If YES, why have the other options not been pursued?
+      response_type: free-text
+      required: true
+    - id: DP-06
+      level: L2
+      question: Does this project/change/system/process involve a large amount of
+        personal information?
+      response_type: Yes/No
+      required: true
+    - id: DP-07
+      level: L2
+      question: 'Does this project/change/system/process involve Personal Information
+        being transferred from the following countries: China, United Kingdom, Brazil?'
+      response_type: Yes/No
+      required: true
+    - id: DP-08
+      level: L2
+      question: Provide a brief summary of the data processing activity and its purpose
+      response_type: free-text
+      required: true
+    - id: DP-09
+      level: L2
+      question: Can you explain to the public how the project's proposed usage of
+        data is safe, reliable, trustworthy and beneficial to the diverse community
+        and individuals?
+      response_type: free-text
+      required: true
+    - id: DP-10
+      level: L2
+      question: What types of Personal Information will be processed?
+      response_type: free-text
+      required: true
+  artificial_intelligence:
+    name: AI Risk
+    questions:
+    - id: AI-04
+      level: L2
+      question: Application Description
+      response_type: free-text
+      required: true
+    - id: AI-05
+      level: L2
+      question: Objective - What is the main goal or function of the AI system? Describe
+        the problem it aims to solve or the task it is designed to perform.
+      response_type: free-text
+      required: true
+    - id: AI-06
+      level: L2
+      question: Scope - Who are the intended users of the AI system? Specify the target
+        audience or user base.
+      response_type: free-text
+      required: true
+    - id: AI-09
+      level: L2
+      show_questions:
+      - AI-10
+      question: Is there the potential for your system to perpetuate or amplify societal
+        biases?
+      response_type: Yes/No
+      required: true
+    - id: AI-10
+      level: L3
+      depends_on:
+        question_id: AI-09
+        answer: 'Yes'
+      question: What measures are in place to address potential issues related to
+        societal bias?
+      response_type: free-text
+      required: true
+    - id: AI-11
+      level: L2
+      show_questions:
+      - AI-12
+      question: Could the AI system have a disproportionate impact on vulnerable groups
+        or exacerbate inequalities?
+      response_type: Yes/No
+      required: true
+    - id: AI-12
+      level: L3
+      depends_on:
+        question_id: AI-11
+        answer: 'Yes'
+      question: What measures are in place to prevent disproportionate impacts on
+        vulnerable groups and to promote fairness and equality?
+      response_type: free-text
+      required: true
+  intellectual_property:
+    name: IP Risk
+    questions:
+    - id: IP-01
+      level: L2
+      show_questions:
+      - D1 Q 4.01
+      comments: Question response is YES/NO and optional free text box for comments
+      question: My project is developing a new or improved product, method or process
+        (including changing or optimising an existing BHP product, method or process)
+      response_type: Yes/No
+      required: false
+    - id: IP-02
+      level: L2
+      show_questions:
+      - C8 Q 3.01
+      comments: Question response is YES/NO and optional free text box for comments
+      question: My project is developing software
+      response_type: Yes/No
+      required: false
+    - id: IP-03
+      level: L2
+      show_questions:
+      - F7 Q 6.01
+      comments: Question response is YES/NO and optional free text box for comments
+      question: My project will access, consume, process or generate data, or share
+        data with others
+      response_type: Yes/No
+      required: false
+    - id: C8 Q 3.01
+      level: L3
+      show_questions:
+      - C1 Q 3.02
+      - C4 Q 3.03
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Is your Project developing software that may incorporate open source
+        software components?
+      response_type: Yes/No
+      required: false
+    - id: C1 Q 3.02
+      level: L3
+      comments: Question response is YES/NO and optional free text box for comments
+      question: 'Do you have a process in place to ensure your team complies with
+        the Technology: Open Source Software Standard?'
+      response_type: Yes/No
+      required: false
+    - id: C4 Q 3.03
+      level: L3
+      show_questions:
+      - C7 Q 3.04
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Are you aware of any open source software components incorporated
+        into the software being developed by your Project that are on the Red or Deny
+        lists on the Technology Standard for Open Source Software?
+      response_type: Yes/No
+      required: false
+    - id: C7 Q 3.04
+      level: L3
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Do you have all required approvals for any open source software incorporated
+        into software that is being developed in your Project?
+      response_type: Yes/No
+      required: false
+    - id: D1 Q 4.01
+      level: L3
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Will your Project create a new product or process, or change a process?
+      response_type: Yes/No
+      required: false
+    - id: D3 Q 4.02
+      level: L3
+      show_questions:
+      - D5 Q 4.04
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Is anyone in your Project team aware of any patents covering key items,
+        methods or processes required for your Project (through previous FTO searches
+        or otherwise)?
+      response_type: Yes/No
+      required: false
+    - id: D5 Q 4.04
+      level: L3
+      comments: Question response is YES/NO and optional free text box for comments
+      question: As you have identified patents that may be problematic, have you already
+        engaged with Legal to consider the risk and, if necessary, adopted any mitigation
+        strategies to reduce the risk presented by those patents?
+      response_type: Yes/No
+      required: false
+    - id: F7 Q 6.01
+      level: L3
+      show_questions:
+      - F8 Q 6.02
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Data - Will your Project be a Data Producer or Data Consumer?
+      response_type: Yes/No
+      required: false
+    - id: F8 Q 6.02
+      level: L3
+      comments: Question response is YES/NO and optional free text box for comments
+      question: Have you complied with all relevant sections of the Data Global Standard,
+        including in relation to 'Managing and using our Data' and 'Safeguarding our
+        Data'?
+      response_type: Yes/No
+      required: false
+ai_agent_instructions:
+  introduction: Welcome to the BHP Technology & Application Services Assessment. I'll
+    guide you through a series of questions to assess risks related to your technology
+    change or initiative. Let's start with some qualifying questions.
+  flow:
+  - Start with all L1 qualifying questions (C-01 through C-06)
+  - Based on Yes responses, activate relevant risk area question sets
+  - Present L2 questions for activated risk areas
+  - Show L3 questions only after their parent L2 question is answered
+  - Apply skip logic to hide irrelevant questions
+  - Apply depends_on logic to show conditional questions
+  response_handling:
+  - For free-text responses, accept and store the user's input
+  - For Yes/No responses, trigger appropriate navigation logic
+  - Track all responses for final assessment report
+  - Flag unanswered required questions
+  validation:
+  - Ensure all required questions in active risk areas are answered
+  - Validate that conditional questions appear only when dependencies are met
+  - Confirm skip logic is properly applied
+  - Check that hierarchical navigation (L1→L2→L3) is maintained
+  completion:
+  - Summarize all risk areas assessed
+  - List any flagged concerns or required follow-ups
+  - Provide assessment completion status
+  - Generate final report with all responses
+metadata:
+  version: Demo
+  last_updated: '2024'
+  source: Demo excel file
+  description: BHP Decision Tree Assessment for Technology & Application Services
+    covering Third Party Risk, Data Privacy Risk, AI Risk, and Intellectual Property
+    Risk
+  total_qualifying_questions: 6
+  total_risk_areas: 4
+  contact_info:
+    ethics_compliance: elika.taghizadeh@bhp.com
