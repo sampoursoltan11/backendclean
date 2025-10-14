@@ -15,7 +15,27 @@ This backend provides an AI-powered TRA system using:
 
 ## Quick Start
 
-### 1. Start the Backend
+### Using Makefile (Recommended) 🚀
+
+```bash
+# Start both backend and frontend
+make start
+
+# Check status
+make status
+
+# Stop servers
+make stop
+
+# View all available commands
+make help
+```
+
+See [docs/getting-started/MAKEFILE_GUIDE.md](docs/getting-started/MAKEFILE_GUIDE.md) for complete reference.
+
+### Manual Start
+
+#### 1. Start the Backend
 
 ```bash
 ./scripts/run_backend.sh
@@ -26,13 +46,22 @@ Server will be available at:
 - **Docs**: http://localhost:8000/docs
 - **WebSocket**: ws://localhost:8000/ws/enterprise/{session_id}
 
-### 2. Test the Backend
+#### 2. Start the Frontend
+
+```bash
+cd frontend && npm run dev
+```
+
+Frontend will be available at:
+- **App**: http://localhost:5173/enterprise_tra_home_clean.html
+
+#### 3. Test the Backend
 
 ```bash
 ./scripts/test_backend.sh
 ```
 
-### 3. View API Documentation
+#### 4. View API Documentation
 
 Open http://localhost:8000/docs in your browser for interactive API documentation.
 

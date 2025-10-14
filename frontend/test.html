@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend-Backend Connection Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold mb-4">TRA Frontend-Backend Connection Test</h1>
+
+        <button onclick="runTests()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 mb-4">
+            Run Connection Tests
+        </button>
+
+        <div id="results" class="bg-gray-50 p-4 rounded-lg font-mono text-sm overflow-auto" style="max-height: 600px;">
+            <p class="text-gray-500">Click the button above to run tests...</p>
+        </div>
+    </div>
+
+    <script>
+        async function runTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p class="text-blue-600">Running tests...</p>';
+
+            let output = '';
+
+            function log(message, isError = false) {
+                const color = isError ? 'text-red-600' : 'text-gray-800';
+                output += `<p class="${color}">${message}</p>`;
+                resultsDiv.innerHTML = output;
+            }
+
+            try {
+                // Test 1: Check if backend is reachable
+                log('=== Test 1: Backend Health Check ===');
+                try {
+                    const healthRes = await fetch('/api/health');
+                    const healthData = await healthRes.json();
+                    log(`✅ Backend health: ${JSON.stringify(healthData)}`);
+                } catch (error) {
+                    log(`❌ Backend health failed: ${error.message}`, true);
+                }
+
+                // Test 2: Check system status
+                log('\\n=== Test 2: System Status ===');
+                try {
+                    const statusRes = await fetch('/api/system/status');
+                    const statusData = await statusRes.json();
+                    log(`✅ System status: ${JSON.stringify(statusData)}`);
+                } catch (error) {
+                    log(`❌ System status failed: ${error.message}`, true);
+                }
+
+                // Test 3: Test assessment search
+                log('\\n=== Test 3: Assessment Search ===');
+                try {
+                    const searchRes = await fetch('/api/assessments/search?query=test&limit=1');
+                    const searchData = await searchRes.json();
+                    log(`✅ Search results: ${JSON.stringify(searchData)}`);
+                } catch (error) {
+                    log(`❌ Search failed: ${error.message}`, true);
+                }
+
+                // Test 4: Check if CSS is loading
+                log('\\n=== Test 4: Static Assets ===');
+                try {
+                    const cssRes = await fetch('/css/main.css');
+                    log(`✅ CSS loaded: status ${cssRes.status}`);
+                } catch (error) {
+                    log(`❌ CSS failed: ${error.message}`, true);
+                }
+
+                // Test 5: Check if JS is loading
+                try {
+                    const jsRes = await fetch('/js/main.js');
+                    log(`✅ JS loaded: status ${jsRes.status}`);
+                } catch (error) {
+                    log(`❌ JS failed: ${error.message}`, true);
+                }
+
+                log('\\n=== All Tests Complete ===');
+
+            } catch (error) {
+                log(`\\n❌ Fatal error: ${error.message}`, true);
+                console.error('Test error:', error);
+            }
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>

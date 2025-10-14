@@ -1,0 +1,261 @@
+/**
+ * Question Component Styles
+ * Styles for interactive questions and answer inputs
+ */
+
+/* Question Container */
+.question-container {
+  background-color: white;
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-md) 0;
+}
+
+/* Question Type Badge */
+.question-type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin-bottom: var(--spacing-md);
+}
+
+.question-type-multiple {
+  background-color: var(--color-blue-100);
+  color: #1e40af;
+}
+
+.question-type-text {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.question-type-yesno {
+  background-color: var(--color-success-light);
+  color: var(--color-success-dark);
+}
+
+.question-type-risk-area {
+  background-color: var(--color-info-light);
+  color: var(--color-info-dark);
+}
+
+/* Question Title/Text */
+.question-title,
+.question-text {
+  font-size: 1.05rem !important;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin-bottom: var(--spacing-lg);
+  line-height: var(--leading-relaxed);
+}
+
+/* Option Item */
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md);
+  margin: var(--spacing-sm) 0;
+  background-color: var(--color-gray-50);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.option-item:hover {
+  background-color: var(--color-gray-100);
+  border-color: var(--color-primary);
+}
+
+.option-item:active {
+  transform: scale(0.98);
+}
+
+.option-item input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin-right: var(--spacing-md);
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.option-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-right: var(--spacing-md);
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.option-label {
+  flex: 1;
+  cursor: pointer;
+  color: var(--color-gray-700);
+  font-size: var(--text-base);
+}
+
+/* Selected Option */
+.option-item.selected {
+  background-color: var(--color-blue-50);
+  border-color: var(--color-primary);
+}
+
+/* Text Input Area */
+.text-input-area {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--spacing-md);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  font-size: 0.95rem;
+  font-family: var(--font-family);
+  resize: vertical;
+  transition: all var(--transition-fast);
+}
+
+.text-input-area:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.text-input-area::placeholder {
+  color: var(--color-gray-400);
+}
+
+/* Free Text Container */
+.free-text-container {
+  margin: var(--spacing-md) 0;
+}
+
+.free-text-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-gray-700);
+  margin-bottom: var(--spacing-sm);
+}
+
+.free-text-hint {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-xs);
+}
+
+/* Submit Answer Button Container */
+.submit-answer-container {
+  margin-top: var(--spacing-lg);
+  text-align: center;
+}
+
+/* Risk Area Buttons (Grid Layout) */
+.risk-area-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+}
+
+.risk-area-button {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.risk-area-button:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.risk-area-button:active {
+  transform: translateY(0);
+}
+
+/* Yes/No Buttons */
+.yesno-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+}
+
+.yesno-button {
+  flex: 1;
+  padding: var(--spacing-lg);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background-color: white;
+}
+
+.yesno-button.yes {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.yesno-button.yes:hover {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.yesno-button.no {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.yesno-button.no:hover {
+  background-color: var(--color-error);
+  color: white;
+}
+
+/* Question Help Text */
+.question-help {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-sm);
+  font-style: italic;
+}
+
+/* Question Counter */
+.question-counter {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  font-weight: 500;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Required Indicator */
+.question-required {
+  color: var(--color-error);
+  margin-left: var(--spacing-xs);
+}
+
+/* Character Count */
+.character-count {
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  margin-top: var(--spacing-xs);
+}
+
+.character-count.limit-reached {
+  color: var(--color-error);
+  font-weight: 600;
+}
