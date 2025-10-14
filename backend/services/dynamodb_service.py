@@ -106,6 +106,7 @@ class DynamoDBService:
                 return {"success": True, "linked_documents": linked_count}
             
             # AWS: find and update documents for this session
+            # TODO: Replace SCAN with Query on GSI2 (session_id as PK) for better performance
             session = aioboto3.Session()
             async with session.client('dynamodb') as client:
                 # Scan for documents belonging to this session
@@ -117,28 +118,38 @@ class DynamoDBService:
                         ':sid': {'S': session_id}
                     }
                 )
-                
+
                 documents = resp.get('Items', [])
-                
-                # Update each document to include assessment_id and GSI keys
-                for doc in documents:
-                    doc_pk = doc['pk']['S']
-                    doc_sk = doc['sk']['S']
-                    
-                    # Update with assessment_id and GSI keys for efficient querying
-                    await client.update_item(
-                        TableName=self.table_name,
-                        Key={'pk': {'S': doc_pk}, 'sk': {'S': doc_sk}},
-                        UpdateExpression='SET assessment_id = :aid, gsi1_pk = :gsi1pk, gsi1_sk = :gsi1sk, updated_at = :updated',
-                        ExpressionAttributeValues={
-                            ':aid': {'S': assessment_id},
-                            ':gsi1pk': {'S': f'ASSESSMENT#{assessment_id}'},
-                            ':gsi1sk': {'S': f'DOC#{doc.get("document_id", {}).get("S", "unknown")}'},
-                            ':updated': {'S': datetime.utcnow().isoformat()}
-                        }
-                    )
-                    
-                    linked_count += 1
+
+                # Use batch_write_item for better performance (25 items per batch)
+                async with session.resource('dynamodb') as resource:
+                    table = await resource.Table(self.table_name)
+                    async with table.batch_writer() as batch:
+                        for doc in documents:
+                            doc_pk = doc['pk']['S']
+                            doc_sk = doc['sk']['S']
+                            doc_id = doc.get("document_id", {}).get("S", "unknown")
+
+                            # Prepare updated item with all existing attributes
+                            updated_item = {k: v for k, v in doc.items()}
+                            # Convert DynamoDB format to Python format
+                            for key in updated_item:
+                                if isinstance(updated_item[key], dict) and len(updated_item[key]) == 1:
+                                    type_key = list(updated_item[key].keys())[0]
+                                    updated_item[key] = updated_item[key][type_key]
+
+                            # Add/update fields
+                            updated_item.update({
+                                'pk': doc_pk,
+                                'sk': doc_sk,
+                                'assessment_id': assessment_id,
+                                'gsi1_pk': f'ASSESSMENT#{assessment_id}',
+                                'gsi1_sk': f'DOC#{doc_id}',
+                                'updated_at': datetime.utcnow().isoformat()
+                            })
+
+                            await batch.put_item(Item=updated_item)
+                            linked_count += 1
             
             return {"success": True, "linked_documents": linked_count}
             

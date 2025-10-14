@@ -303,22 +303,17 @@ async def generate_document_summary(file_content: str, filename: str) -> Dict[st
         Dictionary with summary and key details
     """
     try:
+        import aioboto3
         settings = get_settings()
-        
-        # Use Bedrock Runtime for fast summarization
-        bedrock = boto3.client(
-            'bedrock-runtime',
-            region_name=settings.bedrock_region
-        )
-        
+
         # Limit content to first 4000 characters for speed
         content_sample = file_content[:4000] if len(file_content) > 4000 else file_content
-        
-        prompt = f"""You are analyzing a document for a TECHNOLOGY RISK ASSESSMENT (TRA).  
-Extract only the key factual details needed to understand potential technology, security, and compliance risks.  
+
+        prompt = f"""You are analyzing a document for a TECHNOLOGY RISK ASSESSMENT (TRA).
+Extract only the key factual details needed to understand potential technology, security, and compliance risks.
 Do not interpret, explain, or summarize generally — focus only on concrete facts stated in the document.
 
-Summarize the document in UNDER 180 WORDS, using the following exact structure and section order:  
+Summarize the document in UNDER 180 WORDS, using the following exact structure and section order:
 
 1. Technology Risks - vulnerabilities, threats, weaknesses, or potential risk areas.
 2. Technical Architecture - key systems, applications, platforms, databases, or APIs.
@@ -329,19 +324,19 @@ Summarize the document in UNDER 180 WORDS, using the following exact structure a
 7. Integrations & Third Parties - vendors, external APIs, or service dependencies.
 
 
-Rules:  
-- Use bullet points under each section.  
-- If a section has no information, write “None.”  
-- Keep total summary under 180 words.  
+Rules:
+- Use bullet points under each section.
+- If a section has no information, write "None."
+- Keep total summary under 180 words.
 - Do not include text outside this structure.
 
-Document: {filename}  
-Content:  
+Document: {filename}
+Content:
 {content_sample}
 
 Provide a structured, technology risk-focused summary following the format above."""
-        
-        # Call Bedrock with fast model
+
+        # Call Bedrock with fast model using async client
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 200,
@@ -353,15 +348,18 @@ Provide a structured, technology risk-focused summary following the format above
                 }
             ]
         }
-        
-        response = bedrock.invoke_model(
-            modelId=settings.bedrock_summary_model_id,
-            body=json.dumps(request_body)
-        )
-        
-        response_body = json.loads(response['body'].read())
-        summary = response_body['content'][0]['text']
-        
+
+        # Use async Bedrock client
+        session = aioboto3.Session()
+        async with session.client('bedrock-runtime', region_name=settings.bedrock_region) as bedrock:
+            response = await bedrock.invoke_model(
+                modelId=settings.bedrock_summary_model_id,
+                body=json.dumps(request_body)
+            )
+
+            response_body = json.loads(await response['body'].read())
+            summary = response_body['content'][0]['text']
+
         # Extract key topics from summary
         key_topics = []
         keywords = ['aws', 'azure', 'gcp', 'cloud', 'api', 'database', 'encryption', 

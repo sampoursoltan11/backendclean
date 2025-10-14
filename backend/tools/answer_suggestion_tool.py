@@ -142,13 +142,12 @@ async def _generate_technical_suggestion(
 ) -> dict:
     """Generate technical suggestion using LLM analysis of document summaries."""
     try:
-        import boto3
+        import aioboto3
         import json
         from backend.core.config import get_settings
-        
+
         settings = get_settings()
-        bedrock = boto3.client('bedrock-runtime', region_name=settings.bedrock_region)
-        
+
         # Prepare document context
         doc_context = ""
         for i, doc in enumerate(document_summaries, 1):
@@ -156,7 +155,7 @@ async def _generate_technical_suggestion(
             doc_context += f"Summary: {doc['summary'][:500]}...\n"
             if doc['topics']:
                 doc_context += f"Key Topics: {', '.join(doc['topics'][:5])}\n"
-        
+
         # Prepare options context for select questions
         options_context = ""
         if options and question_type in ["select", "multiselect"]:
@@ -167,7 +166,7 @@ async def _generate_technical_suggestion(
                 elif isinstance(opt, dict):
                     options_list.append(opt.get('label', opt.get('value', str(opt))))
             options_context = f"\nAvailable Options: {', '.join(options_list)}"
-        
+
         # Create LLM prompt for technical guidance - focused on brevity and key details
         prompt = f"""You are a TRA expert. Provide SHORT, SPECIFIC technical guidance for this question.
 
@@ -204,7 +203,7 @@ Response: "ETL pipelines use Azure Recovery Vault for backups. Test recovery pro
 
 JSON response:"""
 
-        # Call Bedrock
+        # Call Bedrock using async client
         logger.info(f"[SUGGESTION DEBUG] Calling Bedrock with model: {settings.bedrock_model_id}")
         logger.info(f"[SUGGESTION DEBUG] Document summaries: {len(document_summaries)} docs")
         logger.info(f"[SUGGESTION DEBUG] Prompt length: {len(prompt)} chars")
@@ -216,13 +215,16 @@ JSON response:"""
             "messages": [{"role": "user", "content": prompt}]
         }
 
-        response = bedrock.invoke_model(
-            modelId=settings.bedrock_model_id,
-            body=json.dumps(request_body)
-        )
+        # Use async Bedrock client
+        session = aioboto3.Session()
+        async with session.client('bedrock-runtime', region_name=settings.bedrock_region) as bedrock:
+            response = await bedrock.invoke_model(
+                modelId=settings.bedrock_model_id,
+                body=json.dumps(request_body)
+            )
 
-        response_body = json.loads(response['body'].read())
-        ai_response = response_body['content'][0]['text']
+            response_body = json.loads(await response['body'].read())
+            ai_response = response_body['content'][0]['text']
 
         logger.info(f"[SUGGESTION DEBUG] Bedrock response length: {len(ai_response)} chars")
         logger.info(f"[SUGGESTION DEBUG] Response preview: {ai_response[:200]}...")
