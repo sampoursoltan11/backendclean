@@ -83,9 +83,19 @@ class DynamoDBService:
         data.setdefault('updated_at', data['created_at'])
         data.setdefault('current_state', 'draft')
         data.setdefault('completion_percentage', 0)
+
         # Ensure pk and sk are set for DynamoDB - use timestamp in sk for uniqueness
         data['pk'] = f'ASSESSMENT#{assessment_id}'
         data['sk'] = f'METADATA#{created_at}'
+
+        # Add GSI attributes for querying
+        data['entity_type'] = 'assessment'  # For GSI2, GSI4, GSI6
+        data['status'] = data.get('current_state', 'draft')  # For GSI3, GSI5
+        if data.get('user_id'):
+            data['user_id'] = data['user_id']  # For GSI3
+        if data.get('session_id'):
+            data['session_id'] = data['session_id']  # For GSI2
+
         logging.debug(f"[DynamoDBService DEBUG] create_assessment (assessment_id={assessment_id}, session_id={data.get('session_id')}) AWS_ONLY={self._use_aws}")
         # AWS path: put item
         session = aioboto3.Session()
@@ -100,22 +110,22 @@ class DynamoDBService:
         """Link all session documents to the specified assessment."""
         try:
             linked_count = 0
-            
+
             if not self._use_aws:
                 # In-memory: not implemented for simplicity
                 return {"success": True, "linked_documents": linked_count}
-            
-            # AWS: find and update documents for this session
-            # TODO: Replace SCAN with Query on GSI2 (session_id as PK) for better performance
+
+            # AWS: find and update documents for this session using gsi2-session-entity
             session = aioboto3.Session()
             async with session.client('dynamodb') as client:
-                # Scan for documents belonging to this session
-                resp = await client.scan(
+                # Query gsi2-session-entity (session_id + entity_type) for documents
+                resp = await client.query(
                     TableName=self.table_name,
-                    FilterExpression='begins_with(pk, :pk_prefix) AND attribute_exists(session_id) AND session_id = :sid',
+                    IndexName='gsi2-session-entity',
+                    KeyConditionExpression='session_id = :sid AND entity_type = :etype',
                     ExpressionAttributeValues={
-                        ':pk_prefix': {'S': 'DOC#'},
-                        ':sid': {'S': session_id}
+                        ':sid': {'S': session_id},
+                        ':etype': {'S': 'document'}
                     }
                 )
 
@@ -240,6 +250,14 @@ class DynamoDBService:
         data = event_obj.dict() if hasattr(event_obj, 'dict') else dict(event_obj)
         data.setdefault('event_id', str(uuid.uuid4()))
         data.setdefault('created_at', datetime.utcnow().isoformat())
+
+        # Add GSI attributes for querying
+        event_type = data.get('event_type', 'event')
+        if event_type == 'assessment_review':
+            data['entity_type'] = 'review'  # For GSI4
+        else:
+            data['entity_type'] = 'event'  # For GSI2, GSI4, GSI6
+
         if not self._use_aws:
             self._events.append(data)
             if data.get('event_type') == 'assessment_review':
@@ -258,6 +276,11 @@ class DynamoDBService:
         data = message_obj.dict() if hasattr(message_obj, 'dict') else dict(message_obj)
         data.setdefault('message_id', str(uuid.uuid4()))
         data.setdefault('timestamp', datetime.utcnow().isoformat())
+        data.setdefault('created_at', data['timestamp'])
+
+        # Add GSI attributes for querying
+        data['entity_type'] = 'message'  # For GSI2, GSI6
+
         if not self._use_aws:
             self._messages.append(data)
             return data
@@ -273,10 +296,18 @@ class DynamoDBService:
         if not self._use_aws:
             return [m for m in self._messages if m.get('session_id') == session_id]
 
-        # For a production DynamoDB single-table design you'd query a GSI. Here we do a scan for simplicity.
+        # Query GSI2 (session_id + entity_type) for messages
         session = aioboto3.Session()
         async with session.client('dynamodb') as client:
-            resp = await client.scan(TableName=self.table_name, FilterExpression="#s = :sid", ExpressionAttributeNames={'#s': 'session_id'}, ExpressionAttributeValues={':sid': {'S': session_id}})
+            resp = await client.query(
+                TableName=self.table_name,
+                IndexName='gsi2-session-entity',
+                KeyConditionExpression='session_id = :sid AND entity_type = :etype',
+                ExpressionAttributeValues={
+                    ':sid': {'S': session_id},
+                    ':etype': {'S': 'message'}
+                }
+            )
             items = resp.get('Items', [])
             return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
 
@@ -284,9 +315,18 @@ class DynamoDBService:
         if not self._use_aws:
             return self._assessment_reviews.get(assessment_id, [])
 
+        # Query gsi3-assessment-events (assessment_id + event_type) for reviews
         session = aioboto3.Session()
         async with session.client('dynamodb') as client:
-            resp = await client.scan(TableName=self.table_name, FilterExpression="#t = :typ AND #a = :aid", ExpressionAttributeNames={'#t': 'event_type', '#a': 'assessment_id'}, ExpressionAttributeValues={':typ': {'S': 'assessment_review'}, ':aid': {'S': assessment_id}})
+            resp = await client.query(
+                TableName=self.table_name,
+                IndexName='gsi3-assessment-events',
+                KeyConditionExpression='assessment_id = :aid AND begins_with(event_type, :etype)',
+                ExpressionAttributeValues={
+                    ':aid': {'S': assessment_id},
+                    ':etype': {'S': 'assessment_review'}
+                }
+            )
             items = resp.get('Items', [])
             return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
 
@@ -294,18 +334,34 @@ class DynamoDBService:
         if not self._use_aws:
             return [e for e in self._events if e.get('assessment_id') == assessment_id]
 
+        # Query gsi3-assessment-events (assessment_id + event_type) for all events
         session = aioboto3.Session()
         async with session.client('dynamodb') as client:
-            resp = await client.scan(TableName=self.table_name, FilterExpression="#a = :aid", ExpressionAttributeNames={'#a': 'assessment_id'}, ExpressionAttributeValues={':aid': {'S': assessment_id}})
+            resp = await client.query(
+                TableName=self.table_name,
+                IndexName='gsi3-assessment-events',
+                KeyConditionExpression='assessment_id = :aid',
+                ExpressionAttributeValues={
+                    ':aid': {'S': assessment_id}
+                }
+            )
             items = resp.get('Items', [])
             return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
 
     async def query_assessments_by_state(self, state: str) -> List[Dict[str, Any]]:
         import logging
         logging.debug(f"[DynamoDBService DEBUG] query_assessments_by_state (state={state}) AWS_ONLY={self._use_aws}")
+
+        # Query gsi4-state-updated (current_state + updated_at) for assessments by state
         session = aioboto3.Session()
         async with session.client('dynamodb') as client:
-            resp = await client.scan(TableName=self.table_name, FilterExpression="#s = :st", ExpressionAttributeNames={'#s': 'current_state'}, ExpressionAttributeValues={':st': {'S': state}})
+            resp = await client.query(
+                TableName=self.table_name,
+                IndexName='gsi4-state-updated',
+                KeyConditionExpression='current_state = :st',
+                ExpressionAttributeValues={':st': {'S': state}},
+                ScanIndexForward=False  # Sort by updated_at descending (most recent first)
+            )
             items = resp.get('Items', [])
             return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
 
@@ -315,13 +371,14 @@ class DynamoDBService:
             # In-memory: filter documents by assessment_id
             return [doc for doc in getattr(self, '_documents', []) if doc.get('assessment_id') == assessment_id]
 
+        # Query gsi1 (gsi1_pk + gsi1_sk) for documents by assessment
+        # Note: gsi1 was set up in link_documents_to_assessment
         session = aioboto3.Session()
         async with session.client('dynamodb') as client:
-            # Try GSI query first (when GSI is available)
             try:
                 resp = await client.query(
                     TableName=self.table_name,
-                    IndexName='gsi1',  # Assumes GSI1 exists
+                    IndexName='gsi1',
                     KeyConditionExpression='gsi1_pk = :pk AND begins_with(gsi1_sk, :sk_prefix)',
                     ExpressionAttributeValues={
                         ':pk': {'S': f'ASSESSMENT#{assessment_id}'},
@@ -331,7 +388,7 @@ class DynamoDBService:
                 items = resp.get('Items', [])
                 return [{k: list(v.values())[0] for k, v in it.items()} for it in items]
             except Exception:
-                # Fallback to scan if GSI doesn't exist
+                # Fallback to SCAN if GSI1 doesn't exist (legacy data)
                 resp = await client.scan(
                     TableName=self.table_name,
                     FilterExpression='begins_with(pk, :pk_prefix) AND assessment_id = :aid',
@@ -409,7 +466,7 @@ class DynamoDBService:
         """Create new document record with summary in DynamoDB."""
         try:
             created_at = datetime.utcnow().isoformat()
-            
+
             item = {
                 'pk': f'DOC#{document_id}',
                 'sk': f'METADATA#{created_at}',
@@ -427,7 +484,10 @@ class DynamoDBService:
                 'processing_status': 'completed',
                 'kb_indexed': False,
                 'created_at': created_at,
-                'updated_at': created_at
+                'updated_at': created_at,
+                # Add GSI attributes for querying
+                'entity_type': 'document',  # For GSI2, GSI4, GSI6
+                'status': 'completed'  # For GSI5
             }
             
             if not self._use_aws:
@@ -476,41 +536,46 @@ class DynamoDBService:
         """Search assessments by project name/title and return top results sorted by last updated."""
         import logging
         logging.debug(f"[DynamoDBService DEBUG] search_assessments (query={query}, limit={limit})")
-        
+
         if not self._use_aws:
             # In-memory: not implemented
             return []
 
+        # Query GSI6 (entity_type + created_at) to get all assessments, then filter in memory
         session = aioboto3.Session()
         async with session.resource('dynamodb') as resource:
             table = await resource.Table(self.table_name)
-            
-            # Scan for assessments with title containing the query (case-insensitive)
+
             query_lower = query.lower()
-            
-            resp = await table.scan(
-                FilterExpression='begins_with(pk, :pk_prefix) AND begins_with(sk, :sk_prefix)',
-                ExpressionAttributeValues={
-                    ':pk_prefix': 'ASSESSMENT#',
-                    ':sk_prefix': 'METADATA'
-                }
+
+            # Query GSI6 for all assessments (sorted by created_at descending)
+            resp = await table.query(
+                IndexName='gsi6-entity-type',
+                KeyConditionExpression='entity_type = :etype',
+                ExpressionAttributeValues={':etype': 'assessment'},
+                ScanIndexForward=False,  # Most recent first
+                Limit=100  # Reasonable limit for filtering
             )
-            
+
             items = resp.get('Items', [])
-            
+
             # Filter by title/project name/assessment_id containing query (case-insensitive)
             matching_items = []
             for item in items:
                 title = item.get('title', '').lower()
                 project_name = item.get('project_name', '').lower()
                 assessment_id = item.get('assessment_id', '').lower()
-                
+
                 if query_lower in title or query_lower in project_name or query_lower in assessment_id:
                     matching_items.append(item)
-            
+
+                # Early exit once we have enough matches
+                if len(matching_items) >= limit:
+                    break
+
             # Sort by updated_at descending (most recent first)
             matching_items.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
-            
+
             # Return top N results
             return matching_items[:limit]
 
