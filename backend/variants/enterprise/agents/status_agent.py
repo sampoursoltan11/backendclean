@@ -120,7 +120,7 @@ Session ID: {session_id}
     
     async def invoke_async(self, message: str, context: Dict[str, Any] = None) -> str:
         """Process message with status tools and update shared context."""
-        print(f"[AGENT DEBUG] StatusAgent.invoke_async called with message: {message!r}, context: {context!r}")
+        logger.debug(f"StatusAgent.invoke_async called with message: {message!r}, context: {context!r}")
         if context is None:
             context = {}
         try:
@@ -131,7 +131,7 @@ Session ID: {session_id}
             context['last_message'] = str(result)
             return context['last_message']
         except Exception as e:
-            print(f"[AGENT DEBUG] StatusAgent error: {e}")
+            logger.debug(f"StatusAgent error: {e}")
             context['last_error'] = str(e)
             return f"Status Agent error: {str(e)}"
     

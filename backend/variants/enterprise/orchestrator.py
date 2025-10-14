@@ -134,7 +134,7 @@ Session ID: {session_id}
         """
         if context is None:
             context = {}
-        print(f"[ORCH DEBUG] _determine_agent called with message: {message!r}")
+        logger.debug(f"_determine_agent called with message: {message!r}")
         
         # Check if this is a follow-up response (yes/no, short answer, etc.)
         message_lower = message.lower().strip()
@@ -153,7 +153,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Qualifying questions mode active, routing to: {agent_type}")
+            logger.debug(f"Qualifying questions mode active, routing to: {agent_type}")
             return self.question_agent, context, None
         
         # Priority 1: Finalize/submit commands should always go to Status Agent
@@ -169,7 +169,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Priority finalize detected, routing to: {agent_type}")
+            logger.debug(f"Priority finalize detected, routing to: {agent_type}")
             return self.status_agent, context, None
         
         # Priority 2: Review answers commands should always go to Status Agent
@@ -185,7 +185,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Priority review detected, routing to: {agent_type}")
+            logger.debug(f"Priority review detected, routing to: {agent_type}")
             return self.status_agent, context, None
         
         # PRIORITY: Check if we're awaiting risk area selection after completing a risk area
@@ -211,7 +211,7 @@ Session ID: {session_id}
                     context['last_routed_agent'] = agent_type
                     # Clear the awaiting flag
                     context['awaiting_risk_area_selection'] = False
-                    print(f"[ORCH DEBUG] Risk area number selection detected: {message_lower}, routing to Question Agent")
+                    logger.debug(f"Risk area number selection detected: {message_lower}, routing to Question Agent")
                     return self.question_agent, context, None
             
             # Try to match by name
@@ -242,7 +242,7 @@ Session ID: {session_id}
                     context['last_routed_agent'] = agent_type
                     # Clear the awaiting flag
                     context['awaiting_risk_area_selection'] = False
-                    print(f"[ORCH DEBUG] Risk area name selection detected: {message}, routing to Question Agent")
+                    logger.debug(f"Risk area name selection detected: {message}, routing to Question Agent")
                     return self.question_agent, context, None
         
         # IMPORTANT: Check if we're in the middle of a question flow BEFORE checking for risk area names
@@ -266,7 +266,7 @@ Session ID: {session_id}
                     context['clarification_needed'] = False
                     context['clarification_prompt'] = None
                     context['last_routed_agent'] = agent_type
-                    print(f"[ORCH DEBUG] User is answering current question, routing to: {agent_type}")
+                    logger.debug(f"User is answering current question, routing to: {agent_type}")
                     return self.question_agent, context, None
         
         # Special case: Check if message is a risk area name/selection (when in question flow context)
@@ -310,7 +310,7 @@ Session ID: {session_id}
                 context['clarification_needed'] = False
                 context['clarification_prompt'] = None
                 context['last_routed_agent'] = agent_type
-                print(f"[ORCH DEBUG] Detected risk area selection, routing to: {agent_type}")
+                logger.debug(f"Detected risk area selection, routing to: {agent_type}")
                 return self.question_agent, context, None
         
         # Check if we're in a context where we're waiting for specific information
@@ -347,14 +347,14 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Detected question start intent, routing to: {agent_type}")
+            logger.debug(f"Detected question start intent, routing to: {agent_type}")
             return self.question_agent, context, None
         
         # If this looks like a follow-up and we have a last agent, route to same agent
         if is_follow_up and context.get('last_routed_agent'):
             last_agent_type = context['last_routed_agent']
             agent = self._get_agent_by_type(last_agent_type)
-            print(f"[ORCH DEBUG] Detected follow-up message, routing to previous agent: {last_agent_type}")
+            logger.debug(f"Detected follow-up message, routing to previous agent: {last_agent_type}")
             context['intent_extraction'] = {
                 'method': 'follow_up',
                 'intent': [last_agent_type],
@@ -382,7 +382,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Priority finalize detected, routing to: {agent_type}")
+            logger.debug(f"Priority finalize detected, routing to: {agent_type}")
             return self.status_agent, context, None
         
         # Step 1: SLM intent extraction with confidence
@@ -407,7 +407,7 @@ Session ID: {session_id}
                 intent = [intent_text.strip().lower()]
                 confidence = 0.5
                 reasoning = f"SLM returned non-JSON, fallback to text: {intent_text.strip()}"
-            print(f"[ORCH DEBUG] SLM intent extraction result: {intent!r}, confidence: {confidence}, reasoning: {reasoning}")
+            logger.debug(f"SLM intent extraction result: {intent!r}, confidence: {confidence}, reasoning: {reasoning}")
             context['intent_extraction'] = {
                 'method': 'slm',
                 'intent': intent,
@@ -424,7 +424,7 @@ Session ID: {session_id}
                 )
                 context['clarification_needed'] = True
                 context['clarification_prompt'] = clarification_prompt
-                print(f"[ORCH DEBUG] Clarification needed: {clarification_prompt}")
+                logger.debug(f"Clarification needed: {clarification_prompt}")
                 return None, context, clarification_prompt
             # If multi-intent, prefer to prompt for clarification
             if isinstance(intent, list) and len(intent) > 1:
@@ -434,7 +434,7 @@ Session ID: {session_id}
                 )
                 context['clarification_needed'] = True
                 context['clarification_prompt'] = clarification_prompt
-                print(f"[ORCH DEBUG] Multi-intent clarification needed: {clarification_prompt}")
+                logger.debug(f"Multi-intent clarification needed: {clarification_prompt}")
                 return None, context, clarification_prompt
             # Single intent, high confidence
             agent_type = intent[0] if isinstance(intent, list) else intent
@@ -442,11 +442,11 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print(f"[ORCH DEBUG] Routing to agent (SLM): {agent_type}")
+            logger.debug(f"Routing to agent (SLM): {agent_type}")
             return agent, context, None
         except Exception as e:
             reasoning += f"SLM intent extraction failed: {e}\n"
-            print(f"[ORCH DEBUG] SLM intent extraction failed: {e}")
+            logger.debug(f"SLM intent extraction failed: {e}")
             context['intent_extraction'] = {
                 'method': 'slm',
                 'intent': None,
@@ -470,7 +470,7 @@ Session ID: {session_id}
                     context['clarification_needed'] = False
                     context['clarification_prompt'] = None
                     context['last_routed_agent'] = agent_type
-                    print(f"[ORCH DEBUG] Routing to agent (regex): {agent_type}")
+                    logger.debug(f"Routing to agent (regex): {agent_type}")
                     return self._get_agent_by_type(agent_type), context, None
         # Step 3: Fallback to keywords
         if any(word in message_lower for word in ['create', 'new', 'start', 'list']):
@@ -486,7 +486,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print("[ORCH DEBUG] Routing to agent (fallback): assessment")
+            logger.debug(f"Routing to agent (fallback): assessment")
             return self.assessment_agent, context, None
         elif any(word in message_lower for word in ['document', 'upload', 'file', 'analyze']):
             agent_type = 'document'
@@ -501,7 +501,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print("[ORCH DEBUG] Routing to agent (fallback): document")
+            logger.debug(f"Routing to agent (fallback): document")
             return self.document_agent, context, None
         elif any(word in message_lower for word in ['question', 'answer', 'continue', 'next']):
             agent_type = 'question'
@@ -516,7 +516,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print("[ORCH DEBUG] Routing to agent (fallback): question")
+            logger.debug(f"Routing to agent (fallback): question")
             return self.question_agent, context, None
         elif any(word in message_lower for word in ['status', 'progress', 'export', 'summary']):
             agent_type = 'status'
@@ -531,7 +531,7 @@ Session ID: {session_id}
             context['clarification_needed'] = False
             context['clarification_prompt'] = None
             context['last_routed_agent'] = agent_type
-            print("[ORCH DEBUG] Routing to agent (fallback): status")
+            logger.debug(f"Routing to agent (fallback): status")
             return self.status_agent, context, None
         # Step 4: No match, prompt for clarification
         clarification_prompt = (
@@ -547,7 +547,7 @@ Session ID: {session_id}
         }
         context['clarification_needed'] = True
         context['clarification_prompt'] = clarification_prompt
-        print(f"[ORCH DEBUG] Routing to agent (fallback default): clarification needed")
+        logger.debug(f"Routing to agent (fallback default): clarification needed")
         return None, context, clarification_prompt
     
     def _get_agent_by_type(self, agent_type: str) -> Agent:
@@ -576,7 +576,7 @@ Session ID: {session_id}
             session_id = context.get('session_id', self.session_id)
             context.clear()
             context['session_id'] = session_id
-            print(f"[ORCH DEBUG] Session context cleared by user request")
+            logger.debug(f"Session context cleared by user request")
             return """🔄 Session reset successfully!
 
 Your conversation context has been cleared. You can now start fresh.
@@ -595,8 +595,8 @@ How would you like to proceed?"""
             match = re.search(r"TRA-\d{4}-[A-Z0-9]+", message, re.IGNORECASE)
             if match:
                 context['assessment_id'] = match.group(0)
-        print(f"[ORCH CONTEXT DEBUG] Initial context: {context}")
-        print(f"[ORCH DEBUG] Orchestrator.invoke_async called with message: {message!r}, context: {context!r}")
+        logger.debug(f"Initial context: {context}")
+        logger.debug(f"Orchestrator.invoke_async called with message: {message!r}, context: {context!r}")
         try:
             # --- Option selection logic: Check FIRST before other routing logic ---
             # This allows users to respond with "1", "2", etc. to presented options
@@ -649,7 +649,7 @@ How would you like to proceed?"""
                 # Log selection in context
                 context['option_selected'] = selected_option
                 context['option_selected_text'] = options[selected_option]
-                print(f"[ORCH DEBUG] Option selection: '{selected_option}' -> '{options[selected_option]}'")
+                logger.debug(f"Option selection: '{selected_option}' -> '{options[selected_option]}'")
                 # Route to agent based on option text (simple heuristic: look for keywords)
                 opt_text = options[selected_option].lower()
                 
@@ -800,7 +800,7 @@ How would you like to proceed?"""
                 if context.get('assessment_id') and not target_agent:
                     target_agent = self.assessment_agent
                     context['last_routed_agent'] = 'assessment'
-                    print(f"[ORCH DEBUG] Special routing: add more risk areas with assessment_id={context.get('assessment_id')}")
+                    logger.debug(f"Special routing: add more risk areas with assessment_id={context.get('assessment_id')}")
             # --- PATCH: If multi-intent (assessment, question) and assessment_id is present, default to QuestionAgent ---
             if clarification_prompt and context.get('assessment_id'):
                 # If SLM returned multi-intent and we have assessment_id, prefer QuestionAgent for question-related requests
@@ -812,7 +812,7 @@ How would you like to proceed?"""
                 return clarification_prompt
             if target_agent is None:
                 return "I'm not sure what you want to do. Please clarify if your request is about an assessment, document, question, or status."
-            print(f"[ORCH DEBUG] Routing to agent: {type(target_agent).__name__}")
+            logger.debug(f"Routing to agent: {type(target_agent).__name__}")
             # PATCH: Always inject last loaded assessment_id and risk_area into context if present
             if 'assessment' in context:
                 a = context['assessment']
@@ -827,10 +827,10 @@ How would you like to proceed?"""
                     # Try to get from last assessment in context
                     if 'assessment' in context and context['assessment'].get('assessment_id'):
                         context['assessment_id'] = context['assessment']['assessment_id']
-                print(f"[ORCH CONTEXT DEBUG] Passing to QuestionAgent: {context}")
+                logger.debug(f"Passing to QuestionAgent: {context}")
             # Delegate to agent, always passing context
             result = await target_agent.invoke_async(message, context)
-            print(f"[ORCH CONTEXT DEBUG] After agent call, context: {context}")
+            logger.debug(f"After agent call, context: {context}")
             
             # Extract assessment_id from result if present (for context preservation)
             result_str = str(result)
@@ -838,7 +838,7 @@ How would you like to proceed?"""
                 tra_match = re.search(r'TRA-\d{4}-[A-Z0-9]+', result_str)
                 if tra_match:
                     context['assessment_id'] = tra_match.group(0)
-                    print(f"[ORCH DEBUG] Extracted assessment_id from result: {context['assessment_id']}")
+                    logger.debug(f"Extracted assessment_id from result: {context['assessment_id']}")
             
             # If agent returns a dict with context keys, merge them into context
             if isinstance(result, dict):
@@ -887,7 +887,7 @@ How would you like to proceed?"""
             # Fallback: just return string result
             return str(result)
         except Exception as e:
-            print(f"[ORCH DEBUG] Orchestrator error: {e}")
+            logger.debug(f"Orchestrator error: {e}")
             return f"I encountered an error: {str(e)}. Please try rephrasing your request."
     
     async def stream_async(self, message: str, context: Dict[str, Any] = None) -> AsyncIterator[Dict[str, Any]]:

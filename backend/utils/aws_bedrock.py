@@ -20,15 +20,9 @@ ValidationException: "The provided model identifier is invalid".
 
 import logging
 from typing import Optional, Tuple, List
+from .common import sanitize_bedrock_model_id, INFERENCE_PROFILE_PREFIXES
 
 logger = logging.getLogger(__name__)
-
-# Common constants
-INFERENCE_PROFILE_PREFIXES = (
-    "apac.",
-    "na.",
-    "eu.",
-)
 
 def _default_model_for_region(region: str) -> str:
     """Return a conservative default model id known to be generally available.
@@ -86,21 +80,7 @@ def sanitize_converse_model_id(raw_id: Optional[str], region: str) -> str:
     return rid
 
 
-def sanitize_bedrock_model_id(model_id: str) -> str:
-    """Normalize Bedrock model identifiers for Converse/ConverseStream.
-
-    Strips regional inference profile prefixes like "apac." that are not accepted
-    as modelId in Converse/ConverseStream API. Returns the sanitized model id.
-    
-    This is a simpler version of sanitize_converse_model_id that just handles prefix
-    stripping without logging or fallback logic.
-    """
-    if not model_id:
-        return model_id
-    for prefix in INFERENCE_PROFILE_PREFIXES:
-        if model_id.startswith(prefix):
-            return model_id[len(prefix):]
-    return model_id
+# sanitize_bedrock_model_id is now imported from backend.utils.common
 
 
 def get_converse_model_id(configured_id: Optional[str], region: str, override: Optional[str] = None) -> str:

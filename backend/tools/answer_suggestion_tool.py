@@ -126,7 +126,7 @@ async def suggest_answer_from_context(
         }
         
     except Exception as e:
-        print(f"[SUGGESTION DEBUG] Error: {e}")
+        logger.debug(f"Error: {e}")
         return {
             "success": False,
             "has_suggestion": False,

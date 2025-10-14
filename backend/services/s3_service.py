@@ -47,7 +47,7 @@ class S3Service:
             has_boto_creds = False
 
         self._use_aws = has_env_creds or has_env_profile or has_boto_creds
-        print(f"[DEBUG] S3Service initialized. Use AWS: {self._use_aws} (env_creds={has_env_creds}, env_profile={has_env_profile}, boto_creds={has_boto_creds})")
+        logger.debug(f"S3Service initialized. Use AWS: {self._use_aws} (env_creds={has_env_creds}, env_profile={has_env_profile}, boto_creds={has_boto_creds})")
 
     def health_check(self) -> Dict:
         async def _async():

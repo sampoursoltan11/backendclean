@@ -130,7 +130,7 @@ Session ID: {self.session_id}
     
     async def invoke_async(self, message: str, context: Dict[str, Any] = None) -> str:
         """Process message with assessment tools and update shared context. Enforce required metadata collection."""
-        print(f"[AGENT DEBUG] AssessmentAgent.invoke_async called with message: {message!r}, context: {context!r}")
+        logger.debug(f"AssessmentAgent.invoke_async called with message: {message!r}, context: {context!r}")
         if context is None:
             context = {}
         
@@ -191,29 +191,29 @@ Session ID: {self.session_id}
                 from backend.tools.risk_area_tools import add_risk_area
                 from backend.tools.assessment_tools import get_assessment
                 added = []
-                print(f"[AGENT DEBUG] Selected risk areas to add: {[ra['name'] for ra in selected_areas]}")
-                print(f"[AGENT DEBUG] Assessment ID: {assessment_id}")
+                logger.debug(f"Selected risk areas to add: {[ra['name'] for ra in selected_areas]}")
+                logger.debug(f"Assessment ID: {assessment_id}")
                 for ra in selected_areas:
-                    print(f"[AGENT DEBUG] Adding risk area: {ra['name']} (ID: {ra['id']}) to assessment {assessment_id}")
+                    logger.debug(f"Adding risk area: {ra['name']} (ID: {ra['id']}) to assessment {assessment_id}")
                     try:
                         result = await add_risk_area(assessment_id, ra['id'])
-                        print(f"[AGENT DEBUG] Add risk area result: {result}")
+                        logger.debug(f"Add risk area result: {result}")
                         if result.get('success'):
                             added.append(ra['name'])
                         else:
-                            print(f"[AGENT DEBUG] Add risk area FAILED for {ra['name']}: {result.get('error', 'Unknown error')}")
+                            logger.debug(f"Add risk area FAILED for {ra['name']}: {result.get('error', 'Unknown error')}")
                     except Exception as e:
-                        print(f"[AGENT DEBUG] Exception adding risk area {ra['name']}: {e}")
+                        logger.debug(f"Exception adding risk area {ra['name']}: {e}")
                         import traceback
                         traceback.print_exc()
                 
                 if added:
                     # Fetch the updated assessment to get latest risk areas
-                    print(f"[AGENT DEBUG] Fetching updated assessment after adding {len(added)} risk areas")
+                    logger.debug(f"Fetching updated assessment after adding {len(added)} risk areas")
                     assessment_result = await get_assessment(assessment_id, context)
                     if assessment_result.get('success') and 'assessment' in assessment_result:
                         context['assessment'] = assessment_result['assessment']
-                        print(f"[AGENT DEBUG] Updated assessment in context with active_risk_areas: {assessment_result['assessment'].get('active_risk_areas')}")
+                        logger.debug(f"Updated assessment in context with active_risk_areas: {assessment_result['assessment'].get('active_risk_areas')}")
                     
                     context['available_risk_areas'] = None  # Clear the selection state
                     msg = f"✅ Successfully added risk area(s): {', '.join(added)} to assessment {assessment_id}.\n\n"
@@ -222,14 +222,14 @@ Session ID: {self.session_id}
                     msg += "2. Add more risk areas\n"
                     msg += "3. View current assessment status"
                     context['last_message'] = msg
-                    print(f"[AGENT DEBUG] Returning success message for risk area addition")
+                    logger.debug(f"Returning success message for risk area addition")
                     return msg
                 else:
                     # Risk areas were selected but failed to add
                     # Keep available_risk_areas in context so user can retry
-                    print(f"[AGENT DEBUG] Risk areas were selected but none were successfully added")
-                    print(f"[AGENT DEBUG] Selected areas were: {[ra['name'] for ra in selected_areas]}")
-                    print(f"[AGENT DEBUG] Assessment ID used: {assessment_id}")
+                    logger.debug(f"Risk areas were selected but none were successfully added")
+                    logger.debug(f"Selected areas were: {[ra['name'] for ra in selected_areas]}")
+                    logger.debug(f"Assessment ID used: {assessment_id}")
                     # Don't clear available_risk_areas - keep it so retry stays with Assessment Agent
                     error_msg = f"❌ Failed to add the selected risk areas to assessment {assessment_id}.\n\n"
                     error_msg += f"Selected areas: {', '.join([ra['name'] for ra in selected_areas])}\n\n"
@@ -239,7 +239,7 @@ Session ID: {self.session_id}
                     return error_msg
             else:
                 # No matches found, clear state and ask for clarification
-                print(f"[AGENT DEBUG] No risk areas matched from message: '{message}'")
+                logger.debug(f"No risk areas matched from message: '{message}'")
                 context['available_risk_areas'] = None
                 return (
                     f"I couldn't identify which risk area(s) you want to add from your message: '{message}'\n\n"
@@ -279,7 +279,7 @@ Session ID: {self.session_id}
             if extracted:
                 extracted = re.sub(r'\s+', ' ', extracted).strip(' .,:;')
                 context['project_name'] = extracted
-                print(f"[AGENT DEBUG] Extracted project_name (smart): {context['project_name']}")
+                logger.debug(f"Extracted project_name (smart): {context['project_name']}")
         
         # Enforce required metadata collection before creation
         # Only Project Name is mandatory; System ID, Classification, and Business Unit are optional
@@ -313,7 +313,7 @@ Session ID: {self.session_id}
                 return context['last_message']
             
             # All required fields present - create the assessment directly
-            print(f"[AGENT DEBUG] All required fields present, creating assessment with project_name: {context['project_name']}")
+            logger.debug(f"All required fields present, creating assessment with project_name: {context['project_name']}")
             result = await create_assessment(
                 project_name=context['project_name'],
                 system_id=context.get('system_id', ''),
@@ -476,7 +476,7 @@ Session ID: {self.session_id}
             context['last_message'] = msg_str
             return context['last_message']
         except Exception as e:
-            print(f"[AGENT DEBUG] AssessmentAgent error: {e}")
+            logger.debug(f"AssessmentAgent error: {e}")
             context['last_error'] = str(e)
             return f"Assessment Agent error: {str(e)}"
     

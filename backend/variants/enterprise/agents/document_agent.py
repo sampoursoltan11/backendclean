@@ -101,7 +101,7 @@ Session ID: {session_id}
     
     async def invoke_async(self, message: str, context: Dict[str, Any] = None) -> str:
         """Process message with DynamoDB document analysis tools."""
-        print(f"[AGENT DEBUG] DocumentAgent.invoke_async called with message: {message!r}, context: {context!r}")
+        logger.debug(f"DocumentAgent.invoke_async called with message: {message!r}, context: {context!r}")
         if context is None:
             context = {}
         
@@ -115,7 +115,7 @@ Session ID: {session_id}
             db = DynamoDBService()
             try:
                 # Quick check if there are any recent documents
-                print(f"[AGENT DEBUG] No assessment_id in context. User message: {message}")
+                logger.debug(f"No assessment_id in context. User message: {message}")
                 context['last_message'] = (
                     "I'd be happy to analyze your documents! However, I need to know which TRA assessment "
                     "you'd like me to analyze documents for.\n\n"
@@ -126,7 +126,7 @@ Session ID: {session_id}
                 )
                 return context['last_message']
             except Exception as e:
-                print(f"[AGENT DEBUG] Error checking for documents: {e}")
+                logger.debug(f"Error checking for documents: {e}")
         
         # If we have assessment_id but user is asking to analyze, check documents exist
         if assessment_id and ('analys' in message.lower() or 'document' in message.lower()):
@@ -134,7 +134,7 @@ Session ID: {session_id}
             db = DynamoDBService()
             try:
                 documents = await db.get_documents_by_assessment(assessment_id)
-                print(f"[AGENT DEBUG] Found {len(documents)} documents for assessment {assessment_id}")
+                logger.debug(f"Found {len(documents)} documents for assessment {assessment_id}")
                 if not documents:
                     context['last_message'] = (
                         f"I don't see any documents uploaded for assessment {assessment_id} yet.\n\n"
@@ -147,9 +147,9 @@ Session ID: {session_id}
                     return context['last_message']
                 else:
                     # Documents exist, add context and proceed with analysis
-                    print(f"[AGENT DEBUG] Proceeding with analysis of {len(documents)} documents")
+                    logger.debug(f"Proceeding with analysis of {len(documents)} documents")
             except Exception as e:
-                print(f"[AGENT DEBUG] Error checking documents: {e}")
+                logger.debug(f"Error checking documents: {e}")
 
         try:
             # Pass the message to the agent with context
@@ -160,7 +160,7 @@ Session ID: {session_id}
             context['last_message'] = str(result)
             return context['last_message']
         except Exception as e:
-            print(f"[AGENT DEBUG] DocumentAgent error: {e}")
+            logger.debug(f"DocumentAgent error: {e}")
             context['last_error'] = str(e)
             return (
                 f"Document Agent error: {str(e)}\n\n"

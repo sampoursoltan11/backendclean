@@ -99,8 +99,8 @@ Session ID: {session_id}
     
     async def invoke_async(self, message: str, context: Dict[str, Any] = None) -> str:
         """Process message with question tools, update shared context, robust to ambiguity and missing context."""
-        print(f"[AGENT DEBUG] QuestionAgent.invoke_async called with message: {message!r}, context: {context!r}")
-        print(f"[AGENT CONTEXT ENFORCE] assessment_id in context: {context.get('assessment_id')}")
+        logger.debug(f"QuestionAgent.invoke_async called with message: {message!r}, context: {context!r}")
+        logger.debug(f"assessment_id in context: {context.get('assessment_id')}")
         if context is None:
             context = {}
         
@@ -108,8 +108,8 @@ Session ID: {session_id}
         if context.get('qualifying_questions_mode'):
             return await self._handle_qualifying_questions(message, context)
 
-        print(f"[QUESTION AGENT] === INVOKE === Message: {message}")
-        print(f"[QUESTION AGENT] Context: assessment_id={context.get('assessment_id')}, risk_area={context.get('risk_area')}, awaiting_selection={context.get('awaiting_risk_area_selection')}")
+        logger.debug(f"=== INVOKE === Message: {message}")
+        logger.debug(f"Context: assessment_id={context.get('assessment_id')}, risk_area={context.get('risk_area')}, awaiting_selection={context.get('awaiting_risk_area_selection')}")
 
         try:
             import re
@@ -192,8 +192,8 @@ Session ID: {session_id}
             # Robust risk area selection
             import ast
             active_risk_areas = assessment.get('active_risk_areas', [])
-            print(f"[QUESTION AGENT DEBUG] Raw active_risk_areas from assessment: {active_risk_areas}")
-            print(f"[QUESTION AGENT DEBUG] Type: {type(active_risk_areas)}")
+            logger.debug(f"Raw active_risk_areas from assessment: {active_risk_areas}")
+            logger.debug(f"Type: {type(active_risk_areas)}")
             # Normalize to list if stored as string
             if isinstance(active_risk_areas, str):
                 try:
@@ -202,7 +202,7 @@ Session ID: {session_id}
                     active_risk_areas = [active_risk_areas]
             if not isinstance(active_risk_areas, list):
                 active_risk_areas = [active_risk_areas]
-            print(f"[QUESTION AGENT DEBUG] After normalization: {active_risk_areas}, count: {len(active_risk_areas)}")
+            logger.debug(f"After normalization: {active_risk_areas}, count: {len(active_risk_areas)}")
             from backend.tools.question_tools import get_decision_tree
             decision_tree = get_decision_tree()
             # Handle both dict format (decision_tree2.yaml) and list format
@@ -229,24 +229,24 @@ Session ID: {session_id}
                         risk_area = remaining_ids[idx]
                         context['risk_area'] = risk_area
                         context['awaiting_risk_area_selection'] = False  # Clear the flag
-                        print(f"[QUESTION AGENT] User selected risk area by number: {idx+1} -> {risk_area}")
+                        logger.debug(f"User selected risk area by number: {idx+1} -> {risk_area}")
                 else:
                     # Try to match by name
                     user_input_lower = user_input.lower()
-                    print(f"[QUESTION AGENT] Trying to match user input: '{user_input_lower}'")
-                    print(f"[QUESTION AGENT] Remaining IDs: {remaining_ids}")
+                    logger.debug(f"Trying to match user input: '{user_input_lower}'")
+                    logger.debug(f"Remaining IDs: {remaining_ids}")
                     for rid in remaining_ids:
                         ra_name = ra_map.get(rid, '').lower()
-                        print(f"[QUESTION AGENT] Checking '{ra_name}' against '{user_input_lower}'")
+                        logger.debug(f"Checking '{ra_name}' against '{user_input_lower}'")
                         if ra_name in user_input_lower or user_input_lower in ra_name:
                             risk_area = rid
                             context['risk_area'] = risk_area
                             context['awaiting_risk_area_selection'] = False  # Clear the flag
-                            print(f"[QUESTION AGENT] ✓ MATCHED! User selected risk area by name: {message} -> {risk_area}")
+                            logger.debug(f"✓ MATCHED! User selected risk area by name: {message} -> {risk_area}")
                             break
 
                     if not context.get('risk_area'):
-                        print(f"[QUESTION AGENT] ✗ NO MATCH FOUND for '{user_input_lower}'")
+                        logger.debug(f"✗ NO MATCH FOUND for '{user_input_lower}'")
 
             if not active_risk_areas:
                 context['last_message'] = assessment_header + (
@@ -268,15 +268,15 @@ Session ID: {session_id}
             if not risk_area and len(active_risk_areas) > 1 and not context.get('awaiting_risk_area_selection'):
                 area_names = [ra_map.get(r, r) for r in active_risk_areas]
 
-                print(f"[QUESTION AGENT DEBUG] Showing risk area selection menu")
-                print(f"[QUESTION AGENT DEBUG] active_risk_areas: {active_risk_areas}")
-                print(f"[QUESTION AGENT DEBUG] area_names: {area_names}")
+                logger.debug(f"Showing risk area selection menu")
+                logger.debug(f"active_risk_areas: {active_risk_areas}")
+                logger.debug(f"area_names: {area_names}")
 
                 # Show button menu using RISK_AREA_BUTTONS format (same as assessment_agent)
                 msg = assessment_header + "🎯 **Multiple risk areas have been assigned!**\n\n"
                 msg += "RISK_AREA_BUTTONS:" + "|".join(area_names)
 
-                print(f"[QUESTION AGENT DEBUG] Final message: {msg}")
+                logger.debug(f"Final message: {msg}")
 
                 context['last_message'] = msg
                 context['active_risk_areas'] = area_names
@@ -325,14 +325,14 @@ Session ID: {session_id}
                 
                 # Find remaining areas that haven't been completed yet
                 all_answers = assessment.get('answers_by_risk_area', {})
-                print(f"[QUESTION AGENT COMPLETION] Current risk_area: {risk_area}")
-                print(f"[QUESTION AGENT COMPLETION] Active risk areas: {active_risk_areas}")
-                print(f"[QUESTION AGENT COMPLETION] All answers by risk area: {all_answers}")
+                logger.debug(f"Current risk_area: {risk_area}")
+                logger.debug(f"Active risk areas: {active_risk_areas}")
+                logger.debug(f"All answers by risk area: {all_answers}")
 
                 remaining_areas = []
                 for r in active_risk_areas:
                     if r == risk_area:  # Skip current area we just finished
-                        print(f"[QUESTION AGENT COMPLETION] Skipping current area: {r}")
+                        logger.debug(f"Skipping current area: {r}")
                         continue
 
                     # Use smart completion logic - only count applicable questions
@@ -340,16 +340,16 @@ Session ID: {session_id}
                     area_answers = all_answers.get(r, {})
                     applicable_count, answered_count = _count_applicable_questions(r, area_answers, decision_tree)
 
-                    print(f"[QUESTION AGENT COMPLETION] Area {r}: {answered_count}/{applicable_count} applicable questions answered")
+                    logger.debug(f"Area {r}: {answered_count}/{applicable_count} applicable questions answered")
 
                     if answered_count < applicable_count:
                         # This area still has unanswered applicable questions
-                        print(f"[QUESTION AGENT COMPLETION] Area {r} is INCOMPLETE, adding to remaining")
+                        logger.debug(f"Area {r} is INCOMPLETE, adding to remaining")
                         remaining_areas.append(r)
                     else:
-                        print(f"[QUESTION AGENT COMPLETION] Area {r} is COMPLETE (all applicable questions answered), skipping")
+                        logger.debug(f"Area {r} is COMPLETE (all applicable questions answered), skipping")
 
-                print(f"[QUESTION AGENT COMPLETION] Remaining areas: {remaining_areas}")
+                logger.debug(f"Remaining areas: {remaining_areas}")
                 if remaining_areas:
                     area_names = [ra_map.get(r, r) for r in remaining_areas]
 
@@ -362,7 +362,7 @@ Session ID: {session_id}
                     context['remaining_risk_area_ids'] = remaining_areas  # Store IDs for easy mapping
                     context['awaiting_risk_area_selection'] = True
                     context['risk_area'] = None  # Clear current risk area to force selection
-                    print(f"[QUESTION AGENT] Set awaiting_risk_area_selection=True, cleared risk_area")
+                    logger.debug(f"Set awaiting_risk_area_selection=True, cleared risk_area")
                 else:
                     # Remove extra line breaks that cause formatting issues in frontend
                     context['last_message'] = assessment_header + (
@@ -461,7 +461,7 @@ Session ID: {session_id}
             context['last_message'] = response
             return response
         except Exception as e:
-            print(f"[AGENT DEBUG] QuestionAgent error: {e}")
+            logger.debug(f"QuestionAgent error: {e}")
             context['last_error'] = str(e)
             return f"Question Agent error: {str(e)}"
     
@@ -597,9 +597,9 @@ Session ID: {session_id}
                     if risk_area_id not in triggered_areas:
                         triggered_areas.append(risk_area_id)
                     context['triggered_risk_areas'] = triggered_areas
-                    print(f"[QUALIFYING Q] Triggered risk area: {risk_area_to_add} -> {risk_area_id}")
+                    logger.debug(f"Triggered risk area: {risk_area_to_add} -> {risk_area_id}")
                 else:
-                    print(f"[QUALIFYING Q] WARNING: Could not map risk area '{risk_area_to_add}' to an ID")
+                    logger.debug(f"WARNING: Could not map risk area '{risk_area_to_add}' to an ID")
         
         # Find next question
         current_index = next((i for i, q in enumerate(qualifying_questions) if q['id'] == current_q_id), -1)

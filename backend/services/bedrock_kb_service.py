@@ -31,7 +31,7 @@ class BedrockKnowledgeBaseService:
     async def list_all_kb_items(self) -> list:
         """List all documents/items in the Bedrock Knowledge Base (global KB listing)."""
         # If AWS Bedrock is enabled, try to list documents via Bedrock API
-        print(f"[KB DEBUG] list_all_kb_items: use_aws={self._use_aws}, kb_id={self.knowledge_base_id}, data_source_id={getattr(self.settings, 'bedrock_data_source_id', None)}")
+        logger.debug(f"KB: list_all_kb_items: use_aws={self._use_aws}, kb_id={self.knowledge_base_id}, data_source_id={getattr(self.settings, 'bedrock_data_source_id', None)}")
         if self._use_aws and self.knowledge_base_id and self.settings.bedrock_data_source_id:
             try:
                 session = aioboto3.Session()
@@ -42,9 +42,9 @@ class BedrockKnowledgeBaseService:
                         knowledgeBaseId=self.knowledge_base_id,
                         dataSourceId=self.settings.bedrock_data_source_id
                     ):
-                        print(f"[KB DEBUG] Bedrock paginator page: {page}")
+                        logger.debug(f"KB: Bedrock paginator page: {page}")
                         for doc in page.get('documentDetails', []):
-                            print(f"[KB DEBUG] Bedrock doc detail: {doc}")
+                            logger.debug(f"KB: Bedrock doc detail: {doc}")
                             items.append({
                                 'document_id': doc.get('identifier', {}).get('s3', {}).get('uri', ''),
                                 'filename': doc.get('identifier', {}).get('s3', {}).get('uri', '').split('/')[-1],
@@ -53,10 +53,10 @@ class BedrockKnowledgeBaseService:
                                 'updated_at': doc.get('updatedAt'),
                                 'source': doc.get('identifier', {}).get('dataSourceType', ''),
                             })
-                    print(f"[KB DEBUG] Bedrock KB items found: {len(items)}")
+                    logger.debug(f"KB: Bedrock KB items found: {len(items)}")
                     return items
             except Exception as e:
-                print(f"[KB DEBUG] Bedrock list_all_kb_items failed: {e}")
+                logger.debug(f"KB: Bedrock list_all_kb_items failed: {e}")
                 # fall through to S3/local fallback
         # Fallback: list from S3 (if configured) or local directory
         # Try S3
@@ -79,7 +79,7 @@ class BedrockKnowledgeBaseService:
             if items:
                 return items
         except Exception as e:
-            print(f"[KB DEBUG] S3 list_all_kb_items failed: {e}")
+            logger.debug(f"KB: S3 list_all_kb_items failed: {e}")
         # Fallback: local directory scan
         items = []
         for assessment_dir in self.kb_path.glob('*'):
@@ -102,7 +102,7 @@ class BedrockKnowledgeBaseService:
         self.kb_path = BASE
         # Detect AWS usage
         self._use_aws = bool(os.getenv('AWS_ACCESS_KEY_ID') or os.getenv('AWS_PROFILE') or os.getenv('AWS_DEFAULT_REGION') or self.settings.bedrock_region)
-        print(f"[DEBUG] BedrockKnowledgeBaseService initialized. Use AWS: {self._use_aws} (env_creds={bool(os.getenv('AWS_ACCESS_KEY_ID'))}, env_profile={bool(os.getenv('AWS_PROFILE'))}, env_region={bool(os.getenv('AWS_DEFAULT_REGION'))}, config_region={bool(self.settings.bedrock_region)})")
+        logger.debug(f"BedrockKnowledgeBaseService initialized. Use AWS: {self._use_aws} (env_creds={bool(os.getenv('AWS_ACCESS_KEY_ID'))}, env_profile={bool(os.getenv('AWS_PROFILE'))}, env_region={bool(os.getenv('AWS_DEFAULT_REGION'))}, config_region={bool(self.settings.bedrock_region)})")
         self.bedrock_model_id = self.settings.bedrock_model_id
         self.region = self.settings.bedrock_region
         self.knowledge_base_id = self.settings.bedrock_knowledge_base_id
@@ -138,7 +138,7 @@ class BedrockKnowledgeBaseService:
 
     def upload_document_to_kb(self, file_content: bytes, filename: str, assessment_id: str) -> Dict[str, Any]:
         """Upload document to Knowledge Base with enhanced ingestion monitoring (TRA-centric)."""
-        print(f"[KB DEBUG] upload_document_to_kb called: filename={filename}, assessment_id={assessment_id}, file_size={len(file_content)}")
+        logger.debug(f"KB: upload_document_to_kb called: filename={filename}, assessment_id={assessment_id}, file_size={len(file_content)}")
         async def _async():
             # Always save locally first
             sdir = self.kb_path.joinpath(assessment_id)
@@ -146,7 +146,7 @@ class BedrockKnowledgeBaseService:
             dest = sdir.joinpath(filename)
             with open(dest, 'wb') as f:
                 f.write(file_content)
-            print(f"[KB DEBUG] Saved file locally at {dest}")
+            logger.debug(f"KB: Saved file locally at {dest}")
             result = {
                 "document_id": f"local-{assessment_id}-{filename}",
                 "status": "processing",
@@ -160,7 +160,7 @@ class BedrockKnowledgeBaseService:
                         s3_service = S3Service()
                         s3_key = f"knowledge-base/{assessment_id}/{filename}"
                         s3_result = await s3_service.upload_file(file_content, s3_key)
-                        print(f"[KB DEBUG] S3 upload result: {s3_result}")
+                        logger.debug(f"KB: S3 upload result: {s3_result}")
                         if s3_result.get('success'):
                             result['s3_uploaded'] = True
                             result['s3_key'] = s3_key
@@ -173,15 +173,15 @@ class BedrockKnowledgeBaseService:
                                     description=f"Ingestion for {filename} in assessment {assessment_id}"
                                 )
                                 ingestion_job_id = resp.get('ingestionJob', {}).get('ingestionJobId')
-                                print(f"[KB DEBUG] Bedrock ingestion started: job_id={ingestion_job_id}")
+                                logger.debug(f"KB: Bedrock ingestion started: job_id={ingestion_job_id}")
                                 result['ingestion_job_id'] = ingestion_job_id
                                 result['bedrock_ingestion_started'] = True
                                 result['status'] = 'ingesting'
                 except Exception as e:
-                    print(f"[KB DEBUG] Bedrock ingestion failed: {e}")
+                    logger.debug(f"KB: Bedrock ingestion failed: {e}")
                     result['bedrock_error'] = f"Bedrock ingestion failed: {e}"
                     result['status'] = 'local_only'
-            print(f"[KB DEBUG] upload_document_to_kb result: {result}")
+            logger.debug(f"KB: upload_document_to_kb result: {result}")
             return result
 
         def _sync():
@@ -279,7 +279,7 @@ class BedrockKnowledgeBaseService:
             }
 
     async def retrieve_and_generate(self, query: str, assessment_id: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        print(f"[KB DEBUG] retrieve_and_generate called: query={query!r}, assessment_id={assessment_id}")
+        logger.debug(f"KB: retrieve_and_generate called: query={query!r}, assessment_id={assessment_id}")
         # If AWS Bedrock RetrieveAndGenerate is available, prefer that
         if self._use_aws:
             try:
@@ -297,7 +297,7 @@ class BedrockKnowledgeBaseService:
                                 }
                             }
                         )
-                        print(f"[KB DEBUG] Bedrock retrieve_and_generate response: {resp}")
+                        logger.debug(f"KB: Bedrock retrieve_and_generate response: {resp}")
                         return {
                             'response': resp.get('output', {}).get('text', ''),
                             'citations': resp.get('citations', []),
@@ -305,12 +305,12 @@ class BedrockKnowledgeBaseService:
                             'confidence': 0.8
                         }
             except Exception as e:
-                print(f"[KB DEBUG] Bedrock retrieve_and_generate failed: {e}")
+                logger.debug(f"KB: Bedrock retrieve_and_generate failed: {e}")
                 # fall through to local retrieval
 
         # Local fallback: naive substring search in assessment folder
         assessment_dir = self.kb_path.joinpath(assessment_id)
-        print(f"[KB DEBUG] Local KB search in: {assessment_dir}")
+        logger.debug(f"KB: Local KB search in: {assessment_dir}")
         results = []
         if assessment_dir.exists():
             for f in assessment_dir.glob('**/*'):
@@ -324,10 +324,10 @@ class BedrockKnowledgeBaseService:
                                 "snippet": text[:400]
                             })
                     except Exception as e:
-                        print(f"[KB DEBUG] Error reading {f}: {e}")
+                        logger.debug(f"KB: Error reading {f}: {e}")
                         continue
         response_text = "".join([r['snippet'] for r in results]) or f"No local KB matches for '{query}'"
-        print(f"[KB DEBUG] Local KB search results: {results}")
+        logger.debug(f"KB: Local KB search results: {results}")
         return {
             "response": response_text,
             "citations": results[:5],

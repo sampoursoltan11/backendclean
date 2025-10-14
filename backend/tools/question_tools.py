@@ -309,7 +309,7 @@ async def question_flow(
                             await db.update_assessment(assessment_id, {
                                 'active_risk_areas': active_risk_areas
                             })
-                            print(f"[AUTO-TRIGGER] Added {risk_area_id} based on {question_id}=Yes")
+                            logger.info(f"Auto-trigger: Added {risk_area_id} based on {question_id}=Yes")
             # Calculate OVERALL progress across ALL active risk areas (not just current one)
             # Use smart counting with show_questions logic
             decision_tree = get_decision_tree()

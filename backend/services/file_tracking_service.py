@@ -225,7 +225,7 @@ class FileTrackingService:
                 # Fallback: use local directory scan
                 return await self._get_assessment_files_fallback(assessment_id)
         except Exception as e:
-            print(f"Error getting assessment files: {e}")
+            logger.error(f"Error getting assessment files: {e}")
             # Fallback to directory scan
             return await self._get_assessment_files_fallback(assessment_id)
     
@@ -261,7 +261,7 @@ class FileTrackingService:
             
             return files
         except Exception as e:
-            print(f"Error in fallback file listing: {e}")
+            logger.error(f"Error in fallback file listing: {e}")
             return []
     
     async def get_project_files(self, project_name: str) -> List[Dict[str, Any]]:
@@ -309,7 +309,7 @@ class FileTrackingService:
                 return []
                 
         except Exception as e:
-            print(f"Error getting project files: {e}")
+            logger.error(f"Error getting project files: {e}")
             return []
     
     async def link_file_to_assessment(self, file_id: str, assessment_id: str) -> bool:
@@ -335,11 +335,11 @@ class FileTrackingService:
                 return True
             else:
                 # For in-memory fallback, we can't easily update records
-                print(f"Linking file {file_id} to assessment {assessment_id} (in-memory mode)")
+                logger.debug(f"Linking file {file_id} to assessment {assessment_id} (in-memory mode)")
                 return True
                 
         except Exception as e:
-            print(f"Error linking file to assessment: {e}")
+            logger.error(f"Error linking file to assessment: {e}")
             return False
     
     def get_context_for_agent(self, session_id: str, recent_files_only: bool = True) -> str:

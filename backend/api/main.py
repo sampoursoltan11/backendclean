@@ -17,12 +17,13 @@ from websockets.exceptions import ConnectionClosedError
 
 from backend.core.config import get_settings
 from backend.logging_config import setup_logging
+from backend.utils.common import serialize_datetime
 
 # Set up logging to file + console
 log_file = setup_logging('logs/tra_system.log')
 print(f"📝 All logs are being saved to: {log_file}")
 print(f"📝 You can view the log file with: tail -f {log_file}")
- 
+
 from backend.variants.enterprise import create_enterprise_agent
 from backend.services.s3_service import S3Service
 from backend.services.bedrock_kb_service import BedrockKnowledgeBaseService
@@ -33,20 +34,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="TRA System API", version="2.0.0")
 
-
-def _serialize_datetimes(obj):
-    """Serialize datetime and Decimal objects for JSON compatibility."""
-    if isinstance(obj, dict):
-        return {k: _serialize_datetimes(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [_serialize_datetimes(v) for v in obj]
-    elif isinstance(obj, datetime):
-        return obj.isoformat()
-    elif isinstance(obj, Decimal):
-        # Convert Decimal to float for JSON serialization
-        return float(obj)
-    else:
-        return obj
+# Alias for backward compatibility
+_serialize_datetimes = serialize_datetime
 
 @app.get("/api/documents/ingestion_status/{ingestion_job_id}")
 async def get_ingestion_status(ingestion_job_id: str):
@@ -58,7 +47,7 @@ async def get_ingestion_status(ingestion_job_id: str):
     # For compatibility, add 'ready' and 'complete' at the top level
     response['ready'] = bool(status.get('is_ready', False))
     response['complete'] = bool(status.get('is_complete', False))
-    print(f"[DEBUG] Ingestion status API for job {ingestion_job_id}: status={status.get('status')}, is_ready={status.get('is_ready')}, is_complete={status.get('is_complete')}, response={response}")
+    logger.debug(f"Ingestion status for job {ingestion_job_id}: status={status.get('status')}, is_ready={status.get('is_ready')}, is_complete={status.get('is_complete')}")
     return JSONResponse(response)
 
 # CORS
@@ -150,17 +139,17 @@ async def enterprise_tra_websocket(websocket: WebSocket, session_id: str):
             logger.warning(f"WebSocket send failed: {e}")
     
     while True:
-        print("[WS DEBUG] Waiting for message from client...")
+        logger.debug("WebSocket waiting for client message...")
         try:
             data = await websocket.receive_text()
-            print(f"[WS DEBUG] Received from client: {data!r}")
+            logger.debug(f"WebSocket received: {data[:100]}...")  # Log first 100 chars
         except Exception as e:
-            print(f"[WS DEBUG] Exception on receive_text: {e}")
+            logger.debug(f"WebSocket receive exception: {e}")
             break
         try:
             payload = json.loads(data)
         except Exception:
-            print(f"[WS DEBUG] Invalid JSON: {data!r}")
+            logger.warning(f"WebSocket received invalid JSON: {data[:100]}...")
             await safe_send({"type": "error", "message": "Invalid JSON"})
             continue
         if payload.get('type') == 'message':
@@ -169,21 +158,19 @@ async def enterprise_tra_websocket(websocket: WebSocket, session_id: str):
             incoming_context = payload.get('context', {})
             if incoming_context:
                 persistent_context.update(incoming_context)
-            print(f"[WS DEBUG] Routing message to orchestrator: {message!r}, context: {persistent_context!r}")
+            logger.debug(f"Routing to orchestrator: message='{message[:50]}...', context_keys={list(persistent_context.keys())}")
             response = await tra_orchestrator.invoke_async(message, persistent_context)
             # IMPORTANT: The orchestrator updates persistent_context in place
             # No need to re-assign since Python dicts are mutable and passed by reference
-            print(f"[WS DEBUG] After orchestrator call, updated context: {persistent_context!r}")
-            print(f"[WS DEBUG] Sending response to client: {response!r}")
+            logger.debug(f"Orchestrator response received, context updated with keys: {list(persistent_context.keys())}")
+            logger.debug(f"Sending response to client: {response[:100]}...")
             # Send back updated context for client-side state preservation
             # Serialize datetime objects before sending
             try:
                 serialized_context = _serialize_datetimes(persistent_context)
                 await websocket.send_json({"type": "message", "content": response, "context": serialized_context})
             except Exception as e:
-                print(f"[WS DEBUG] Exception on send_json: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error(f"WebSocket send_json exception: {e}", exc_info=True)
                 break
 
 @app.post("/api/documents/upload")
@@ -195,12 +182,12 @@ async def upload_document(
 ):
     """Upload document, generate AI summary, and save to DynamoDB (No KB upload - faster!)."""
     try:
-        print(f"[UPLOAD DEBUG] Received upload: filename={file.filename}, session_id={session_id}, assessment_id={assessment_id}")
+        logger.debug(f"Upload: Received upload: filename={file.filename}, session_id={session_id}, assessment_id={assessment_id}")
         s3 = get_s3()
         db = get_db()
         
         content = await file.read()
-        print(f"[UPLOAD DEBUG] File size: {len(content)} bytes")
+        logger.debug(f"Upload: File size: {len(content)} bytes")
         
         # Generate unique document ID
         import uuid
@@ -209,7 +196,7 @@ async def upload_document(
         
         # Upload to S3
         s3_result = await s3.upload_file(content, s3_key)
-        print(f"[UPLOAD DEBUG] S3 upload result: {s3_result}")
+        logger.debug(f"Upload: S3 upload result: {s3_result}")
         
         if not s3_result.get('success'):
             return JSONResponse(
@@ -241,7 +228,7 @@ async def upload_document(
                 
                 # Limit to 4000 characters
                 file_text = file_text[:4000]
-                print(f"[UPLOAD DEBUG] Extracted {len(file_text)} chars from PDF")
+                logger.debug(f"Upload: Extracted {len(file_text)} chars from PDF")
                 
             elif file_extension == 'docx':
                 # Extract text from DOCX
@@ -253,16 +240,16 @@ async def upload_document(
                 
                 # Limit to 4000 characters
                 file_text = file_text[:4000]
-                print(f"[UPLOAD DEBUG] Extracted {len(file_text)} chars from DOCX")
+                logger.debug(f"Upload: Extracted {len(file_text)} chars from DOCX")
                 
             elif file_extension in ['txt', 'md', 'json', 'csv']:
                 # Plain text files
                 file_text = content.decode('utf-8', errors='ignore')[:4000]
-                print(f"[UPLOAD DEBUG] Extracted {len(file_text)} chars from text file")
+                logger.debug(f"Upload: Extracted {len(file_text)} chars from text file")
             else:
                 # Unsupported file type
                 file_text = f"Document: {file.filename}"
-                print(f"[UPLOAD DEBUG] Unsupported file type: {file_extension}")
+                logger.debug(f"Upload: Unsupported file type: {file_extension}")
             
             # Generate AI summary
             from backend.tools.document_tools import generate_document_summary
@@ -271,10 +258,10 @@ async def upload_document(
             summary = summary_result.get('summary', f'Document: {file.filename}')
             key_topics = summary_result.get('key_topics', [])
             
-            print(f"[UPLOAD DEBUG] Summary generated: {summary[:100]}...")
+            logger.debug(f"Upload: Summary generated: {summary[:100]}...")
             
         except Exception as e:
-            print(f"[UPLOAD DEBUG] Text extraction error: {e}")
+            logger.debug(f"Upload: Text extraction error: {e}")
             import traceback
             traceback.print_exc()
             summary = f"Document uploaded: {file.filename}"
@@ -295,7 +282,7 @@ async def upload_document(
                 key_topics
             )
             message = f"✅ Updated document '{file.filename}' with new AI summary"
-            print(f"[UPLOAD DEBUG] Updated existing document")
+            logger.debug(f"Upload: Updated existing document")
         else:
             # CREATE: New document record
             await db.create_document_record(
@@ -310,24 +297,24 @@ async def upload_document(
                 session_id=session_id
             )
             message = f"✅ Uploaded '{file.filename}' - AI summary ready!"
-            print(f"[UPLOAD DEBUG] Created new document record")
+            logger.debug(f"Upload: Created new document record")
         
         # Update assessment's linked documents list
         await db.update_assessment_documents_list(assessment_id)
         
         # NEW: Auto-trigger risk area analysis for ALL document uploads
-        print(f"[AUTO-ANALYSIS DEBUG] Starting auto-analysis for assessment {assessment_id}")
+        logger.info(f"Auto-analysis: Starting auto-analysis for assessment {assessment_id}")
         try:
             # Trigger automatic risk area analysis
             from backend.tools.document_tools import suggest_risk_areas_from_documents
             from backend.tools.question_tools import get_decision_tree
             
-            print(f"[AUTO-ANALYSIS DEBUG] Calling suggest_risk_areas_from_documents...")
+            logger.info(f"Auto-analysis: Calling suggest_risk_areas_from_documents...")
             suggestions = await suggest_risk_areas_from_documents(assessment_id)
-            print(f"[AUTO-ANALYSIS DEBUG] Suggestions result: {suggestions}")
+            logger.info(f"Auto-analysis: Suggestions result: {suggestions}")
             
             if suggestions.get('success') and suggestions.get('suggested_risk_areas'):
-                print(f"[AUTO-ANALYSIS DEBUG] Found {len(suggestions['suggested_risk_areas'])} suggested areas")
+                logger.info(f"Auto-analysis: Found {len(suggestions['suggested_risk_areas'])} suggested areas")
                 
                 # Map risk area names to IDs
                 decision_tree = get_decision_tree()
@@ -339,16 +326,16 @@ async def upload_document(
                 else:
                     # decision_tree.yaml format: list of dicts
                     risk_area_map = {ra['name']: ra['id'] for ra in risk_areas_raw}
-                print(f"[AUTO-ANALYSIS DEBUG] Risk area map: {risk_area_map}")
+                logger.info(f"Auto-analysis: Risk area map: {risk_area_map}")
                 
                 risk_area_ids = []
                 for area_name in suggestions['suggested_risk_areas']:
                     area_id = risk_area_map.get(area_name)
                     if area_id:
                         risk_area_ids.append(area_id)
-                        print(f"[AUTO-ANALYSIS DEBUG] Mapped {area_name} -> {area_id}")
+                        logger.info(f"Auto-analysis: Mapped {area_name} -> {area_id}")
                     else:
-                        print(f"[AUTO-ANALYSIS DEBUG] Could not map {area_name}")
+                        logger.info(f"Auto-analysis: Could not map {area_name}")
                 
                 if risk_area_ids:
                     import logging
@@ -390,7 +377,7 @@ async def upload_document(
                     verified_area_names = [id_to_name_map.get(area_id, area_id) for area_id in verified_risk_areas]
                     logger.info(f"[AUTO-ANALYSIS] Verified area names: {verified_area_names}")
 
-                    print(f"[AUTO-ANALYSIS DEBUG] Returning auto-analysis success response")
+                    logger.info(f"Auto-analysis: Returning auto-analysis success response")
                     return JSONResponse({
                         "success": True,
                         "file_id": document_id,
@@ -409,12 +396,12 @@ async def upload_document(
                         }
                     })
                 else:
-                    print(f"[AUTO-ANALYSIS DEBUG] No risk area IDs mapped")
+                    logger.info(f"Auto-analysis: No risk area IDs mapped")
             else:
-                print(f"[AUTO-ANALYSIS DEBUG] No suggestions or analysis failed: {suggestions}")
+                logger.info(f"Auto-analysis: No suggestions or analysis failed: {suggestions}")
                 
         except Exception as e:
-            print(f"[AUTO-ANALYSIS DEBUG] Exception in auto-analysis: {e}")
+            logger.info(f"Auto-analysis: Exception in auto-analysis: {e}")
             import traceback
             traceback.print_exc()
         

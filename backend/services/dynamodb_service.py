@@ -24,7 +24,7 @@ class DynamoDBService:
         settings = get_settings()
         self.table_name = os.getenv('DYNAMODB_TABLE_NAME') or settings.dynamodb_table_name
         self._use_aws = True  # Force AWS only for assessments
-        print(f"[DEBUG] DynamoDBService initialized. Use AWS: {self._use_aws} (FORCED, no in-memory fallback)")
+        logger.debug(f"DynamoDBService initialized. Use AWS: {self._use_aws} (FORCED, no in-memory fallback)")
 
     # -------------------------
     # Serialization utilities

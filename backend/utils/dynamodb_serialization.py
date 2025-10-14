@@ -38,49 +38,8 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Union, Tuple, Optio
 logger = logging.getLogger(__name__)
 
 
-def to_dynamodb_safe(value: Any) -> Any:
-    """Recursively convert Python values to DynamoDB-safe types.
-
-    - datetime/date -> ISO 8601 strings
-    - float -> Decimal (via string to avoid float precision issues)
-    - dict/list -> recursively processed
-    - None/bool/int/str -> unchanged
-    """
-    if isinstance(value, (datetime, date)):
-        return value.isoformat()
-    if isinstance(value, float):
-        # DynamoDB prohibits float; use Decimal constructed from string
-        return Decimal(str(value))
-    if isinstance(value, Mapping):
-        return {k: to_dynamodb_safe(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [to_dynamodb_safe(v) for v in value]
-    return value
-
-
-def model_dump_dynamodb_safe(pydantic_model: Any) -> dict:
-    """Dump a Pydantic model to a dict compatible with DynamoDB.
-    
-    Uses mode="json" to serialize datetimes, then converts floats to Decimal.
-    
-    Args:
-        pydantic_model: A Pydantic model instance or dict-like object
-        
-    Returns:
-        Dictionary with all values converted to DynamoDB-compatible types
-    """
-    try:
-        data = pydantic_model.model_dump(mode="json")
-    except Exception:
-        try:
-            # Try dict() for older Pydantic versions or dict-like objects
-            data = dict(pydantic_model)
-        except Exception as e:
-            logger.warning(f"Failed to convert object to dict: {e}")
-            # Last resort if it's not a model or dict-like
-            data = pydantic_model
-    
-    return to_dynamodb_safe(data)
+# Import consolidated functions from common.py
+from .common import to_dynamodb_safe, model_dump_dynamodb_safe
 
 
 def serialize_for_dynamodb(item: Dict[str, Any]) -> Dict[str, Any]:
