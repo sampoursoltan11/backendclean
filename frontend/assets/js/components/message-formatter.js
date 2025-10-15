@@ -526,57 +526,57 @@ export class MessageFormatter {
 
     return `
       <div>${introText}</div>
-      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px;">
         <button onclick="${buttonAOnclick}"
                 class="option-button"
-                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                style="flex: 1 1 calc(50% - 6px); min-width: 280px; padding: 16px 18px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
                 onmouseover="this.style.borderColor='${buttonA.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
                 onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
           <div style="display: flex; align-items: start;">
-            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonA.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
-              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style="flex-shrink: 0; width: 36px; height: 36px; background: ${buttonA.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg style="width: 18px; height: 18px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${buttonA.icon}
               </svg>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonA.label}</div>
-              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonA.desc}</div>
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 0.95rem;">${buttonA.label}</div>
+              <div style="font-size: 0.8rem; color: #6b7280; line-height: 1.4;">${buttonA.desc}</div>
             </div>
           </div>
         </button>
 
         <button onclick="window.populateInput('${buttonB.value}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
                 class="option-button"
-                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                style="flex: 1 1 calc(50% - 6px); min-width: 280px; padding: 16px 18px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
                 onmouseover="this.style.borderColor='${buttonB.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
                 onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
           <div style="display: flex; align-items: start;">
-            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonB.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
-              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style="flex-shrink: 0; width: 36px; height: 36px; background: ${buttonB.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg style="width: 18px; height: 18px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${buttonB.icon}
               </svg>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonB.label}</div>
-              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonB.desc}</div>
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 0.95rem;">${buttonB.label}</div>
+              <div style="font-size: 0.8rem; color: #6b7280; line-height: 1.4;">${buttonB.desc}</div>
             </div>
           </div>
         </button>
 
         <button onclick="window.populateInput('${buttonC.value}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
                 class="option-button"
-                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                style="flex: 1 1 calc(50% - 6px); min-width: 280px; padding: 16px 18px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
                 onmouseover="this.style.borderColor='${buttonC.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
                 onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
           <div style="display: flex; align-items: start;">
-            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonC.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
-              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style="flex-shrink: 0; width: 36px; height: 36px; background: ${buttonC.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg style="width: 18px; height: 18px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${buttonC.icon}
               </svg>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonC.label}</div>
-              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonC.desc}</div>
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 0.95rem;">${buttonC.label}</div>
+              <div style="font-size: 0.8rem; color: #6b7280; line-height: 1.4;">${buttonC.desc}</div>
             </div>
           </div>
         </button>

@@ -33,6 +33,84 @@ def get_db_service() -> DynamoDBService:
     return _db_service
 
 
+def rephrase_question_for_llm(question_text: str) -> str:
+    """
+    Rephrase statement-like questions into proper question format for better LLM understanding.
+
+    Examples:
+    - "Vendor Supplier name" -> "What is the vendor supplier name?"
+    - "Has the contract being signed" -> "Has the contract been signed?"
+    - "Will your Project create a new product" -> "Will your project create a new product or process?"
+
+    Args:
+        question_text: Original question text from YAML
+
+    Returns:
+        Rephrased question text
+    """
+    q = question_text.strip()
+
+    # Already a proper question
+    if q.endswith('?'):
+        return q
+
+    # Convert statement-style questions to proper questions
+    q_lower = q.lower()
+
+    # Pattern 1: Single words or short phrases (likely asking for information)
+    # E.g., "Vendor Supplier name", "Application Description", "Business Application Owner"
+    if len(q.split()) <= 5 and not any(word in q_lower for word in ['will', 'does', 'is', 'are', 'has', 'have', 'can', 'could', 'would', 'should']):
+        # Check for common patterns
+        if 'name' in q_lower:
+            return f"What is the {q.lower()}?"
+        elif any(word in q_lower for word in ['description', 'details', 'objective', 'scope', 'context']):
+            return f"What is the {q.lower()}?"
+        elif 'date' in q_lower:
+            return f"What is the {q.lower()}?"
+        elif 'owner' in q_lower:
+            return f"Who is the {q.lower()}?"
+        else:
+            return f"What is the {q}?"
+
+    # Pattern 2: Statement that should be a question
+    # E.g., "New Access Is granted only to approved persons"
+    if any(q_lower.startswith(word) for word in ['new ', 'access ', 'all ', 'document ', 'controls ', 'testing ']):
+        # Likely a compliance statement asking for confirmation
+        return f"Is it true that {q.lower()}?"
+
+    # Pattern 3: Incomplete yes/no questions missing question mark
+    # E.g., "Has the contract being signed"
+    if any(q_lower.startswith(word) for word in ['will ', 'does ', 'is ', 'are ', 'has ', 'have ', 'can ', 'could ', 'would ', 'should ']):
+        return f"{q}?"
+
+    # Pattern 4: Imperative statements asking for verification
+    # E.g., "Verify that...", "Confirm that...", "Check the..."
+    if any(q_lower.startswith(word) for word in ['verify ', 'confirm ', 'check ', 'provide ', 'explain ']):
+        if q_lower.startswith('verify '):
+            thing = q[len('verify '):].strip()
+            return f"Have you verified that {thing}?"
+        elif q_lower.startswith('confirm '):
+            thing = q[len('confirm '):].strip()
+            return f"Have you confirmed that {thing}?"
+        elif q_lower.startswith('check '):
+            thing = q[len('check '):].strip()
+            return f"Have you checked {thing}?"
+        elif q_lower.startswith('provide '):
+            thing = q[len('provide '):].strip()
+            # Remove "please" and extra whitespace
+            thing = thing.replace('please', '').replace('Please', '').strip()
+            # Remove "a brief summary of" -> just ask for it directly
+            if thing.startswith('a '):
+                thing = thing[2:]
+            return f"What is the {thing}?"
+        elif q_lower.startswith('explain '):
+            thing = q[len('explain '):].strip()
+            return f"Can you explain {thing}?"
+
+    # Default: Add "Please provide" for free-text fields
+    return f"Please provide: {q}"
+
+
 @tool
 async def suggest_answer_from_context(
     assessment_id: str,
@@ -148,11 +226,20 @@ async def _generate_technical_suggestion(
 
         settings = get_settings()
 
-        # Prepare document context
+        # Rephrase question for better LLM understanding
+        rephrased_question = rephrase_question_for_llm(question_text)
+        logger.info(f"[SUGGESTION] Original question: {question_text}")
+        logger.info(f"[SUGGESTION] Rephrased question: {rephrased_question}")
+
+        # Prepare document context with more detail
         doc_context = ""
         for i, doc in enumerate(document_summaries, 1):
             doc_context += f"\n**Document {i}: {doc['filename']}**\n"
-            doc_context += f"Summary: {doc['summary'][:500]}...\n"
+            # Increase summary length from 500 to 1000 chars for better context
+            summary_text = doc['summary'][:1000]
+            if len(doc['summary']) > 1000:
+                summary_text += "..."
+            doc_context += f"Summary: {summary_text}\n"
             if doc['topics']:
                 doc_context += f"Key Topics: {', '.join(doc['topics'][:5])}\n"
 
@@ -167,38 +254,75 @@ async def _generate_technical_suggestion(
                     options_list.append(opt.get('label', opt.get('value', str(opt))))
             options_context = f"\nAvailable Options: {', '.join(options_list)}"
 
-        # Create LLM prompt for technical guidance - focused on brevity and key details
-        prompt = f"""You are a TRA expert. Provide SHORT, SPECIFIC technical guidance for this question.
+        # Create LLM prompt for direct, concise answers using rephrased question
+        prompt = f"""You are a TRA expert. Answer the question below ONLY using specific facts from the user's documents.
 
-**QUESTION:** {question_text}
+**YOUR TASK:**
+Analyze the DOCUMENTS section below and answer the QUESTION with ONE sentence (12-20 words max).
+
+**QUESTION TO ANSWER:**
+{rephrased_question}
 {options_context}
 
-**DOCUMENTS:**
+**DOCUMENTS TO ANALYZE:**
 {doc_context}
 
-**INSTRUCTIONS:**
-- Answer in 2-3 concise sentences maximum
-- Use ONLY specific details from the documents (system names, technologies, data types)
-- Be direct and actionable
-- No generic phrases
+**CRITICAL INSTRUCTIONS:**
+1. READ THE DOCUMENTS ABOVE - Find specific facts that answer this question
+2. ONE sentence maximum (12-20 words)
+3. ONLY use actual facts from the documents (system names, technologies, data mentioned)
+4. DO NOT make up information
+5. DO NOT give generic advice like "consider" or "should implement"
+6. If the documents don't contain relevant information, respond EXACTLY as:
+   - "Not specified in documentation" OR
+   - "No information about [topic] in documentation"
 
-**EXAMPLES:**
+**RESPONSE STYLE GUIDE (illustrative examples only - DO NOT copy these answers):**
 
-Q: "What data is processed?"
-Docs mention: "Azure Data Lake, customer PII, financial records"
-Response: "The system processes customer PII and financial records in Azure Data Lake Gen2. Implement role-based access controls and audit logging."
+When docs contain specific info:
+✅ Quote actual facts: "System uses [actual tech from docs] with [actual data from docs]"
+❌ Generic advice: "Consider implementing best practices for security"
 
-Q: "What backup exists?"
-Docs mention: "ETL pipelines, Recovery Vault"
-Response: "ETL pipelines use Azure Recovery Vault for backups. Test recovery procedures regularly and implement cross-region replication."
+When docs lack specific info:
+✅ Be honest: "Not specified in documentation"
+❌ Make assumptions: "The system likely uses standard encryption"
 
-**JSON FORMAT:**
+When question asks about something not in docs:
+✅ Say so clearly: "No information about patents in documentation"
+❌ Provide generic guidance: "Consider consulting with your legal team"
+
+**IMPORTANT:**
+- DO NOT copy the illustrative examples above
+- ANALYZE THE ACTUAL DOCUMENTS PROVIDED
+- Use specific facts from the user's documents only
+
+**ONE DEMONSTRATION (different domain to show format - DO NOT copy content):**
+Example Question: "What programming language is used?"
+Example Docs: "Mobile app built with React Native and TypeScript"
+Example Response:
 {{
     "has_suggestion": true,
-    "technical_guidance": "2-3 short sentences with specific document details",
+    "technical_guidance": "React Native and TypeScript",
+    "confidence": "high",
+    "reasoning": "Stated in mobile app documentation",
+    "supporting_context": ["Mobile app built with React Native and TypeScript"]
+}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  CRITICAL: NOW ANALYZE THE USER'S ACTUAL DOCUMENTS ABOVE ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The documents you must analyze are listed in the "DOCUMENTS TO ANALYZE" section above.
+Your answer MUST come from those documents ONLY - not from the examples.
+Question to answer: "{rephrased_question}"
+
+**OUTPUT FORMAT (JSON):**
+{{
+    "has_suggestion": true,
+    "technical_guidance": "Your one-sentence answer using ONLY facts from the documents above",
     "confidence": "high/medium/low",
-    "reasoning": "One brief sentence",
-    "supporting_context": ["Detail 1", "Detail 2"]
+    "reasoning": "Which document(s) this came from OR 'No relevant information found'",
+    "supporting_context": ["Actual quote 1 from docs", "Actual quote 2 from docs"] or []
 }}
 
 JSON response:"""
@@ -284,150 +408,37 @@ async def _generate_fallback_suggestion(
     options: list,
     document_summaries: list
 ) -> dict:
-    """Generate intelligent technical guidance by analyzing document summaries and questions."""
-    try:
-        logger.info(f"[FALLBACK DEBUG] Generating intelligent fallback for question: {question_text[:100]}...")
-        
-        # Extract content from document summaries
-        all_topics = []
-        all_summaries = []
-        for doc in document_summaries:
-            all_topics.extend(doc.get('topics', []))
-            if doc.get('summary'):
-                all_summaries.append(doc.get('summary', ''))
-        
-        # Combine all document content
-        combined_content = ' '.join(all_summaries).lower()
-        question_lower = question_text.lower()
+    """
+    Honest fallback when LLM cannot generate a suggestion.
+    Returns 'Not specified in documentation' instead of generic advice.
+    """
+    logger.info(f"[FALLBACK] LLM could not generate suggestion for: {question_text[:100]}...")
+    logger.info(f"[FALLBACK] Available documents: {len(document_summaries)}")
 
-        logger.info(f"[FALLBACK DEBUG] Document content length: {len(combined_content)}, Topics: {all_topics[:5]}")
-        
-        # Intelligent content analysis
-        guidance_parts = []
-        specific_references = []
-        
-        # Analyze document content for specific technologies/systems
-        # AWS
-        if 'aws' in combined_content or 'amazon' in combined_content:
-            if 'security' in question_lower or 'access' in question_lower or 'authentication' in question_lower:
-                guidance_parts.append("Based on your AWS infrastructure, consider implementing IAM policies and security groups")
-                specific_references.append("AWS services mentioned in your documentation")
-            elif 'backup' in question_lower or 'recovery' in question_lower:
-                guidance_parts.append("For your AWS environment, evaluate S3 backup strategies and cross-region replication")
-                specific_references.append("AWS architecture described in documents")
+    # Extract topic from question to make the message more specific
+    question_lower = question_text.lower()
+    topic = "this information"
 
-        # Azure
-        if 'azure' in combined_content or 'microsoft' in combined_content:
-            if 'security' in question_lower or 'access' in question_lower or 'authentication' in question_lower:
-                guidance_parts.append("Based on your Azure infrastructure, ensure Azure AD role-based access controls and implement Conditional Access policies")
-                specific_references.append("Azure services mentioned in your documentation")
-            elif 'backup' in question_lower or 'recovery' in question_lower:
-                guidance_parts.append("For your Azure environment, leverage Azure Backup and geo-redundant storage for disaster recovery")
-                specific_references.append("Azure architecture described in documents")
-            elif 'data' in question_lower or 'privacy' in question_lower:
-                if 'data lake' in combined_content or 'synapse' in combined_content or 'data factory' in combined_content:
-                    guidance_parts.append("Your Azure data platform (Data Lake/Synapse/Data Factory) requires data classification, encryption, and access logging")
-                    specific_references.append("Azure data services identified in your documents")
+    if any(word in question_lower for word in ['patent', 'intellectual property', 'ip']):
+        topic = "patent information"
+    elif any(word in question_lower for word in ['vendor', 'supplier', 'third party']):
+        topic = "vendor/supplier details"
+    elif any(word in question_lower for word in ['backup', 'recovery', 'disaster']):
+        topic = "backup/recovery information"
+    elif any(word in question_lower for word in ['security', 'access', 'authentication']):
+        topic = "security details"
+    elif any(word in question_lower for word in ['data', 'privacy', 'personal information']):
+        topic = "data/privacy information"
+    elif any(word in question_lower for word in ['monitoring', 'logging']):
+        topic = "monitoring details"
 
-        # GCP
-        if 'gcp' in combined_content or 'google cloud' in combined_content:
-            if 'security' in question_lower or 'access' in question_lower:
-                guidance_parts.append("For your GCP environment, implement IAM policies and Cloud Identity for access management")
-                specific_references.append("GCP services mentioned in your documentation")
-            elif 'backup' in question_lower or 'recovery' in question_lower:
-                guidance_parts.append("Your GCP infrastructure should leverage Cloud Storage for backups and multi-region replication")
-                specific_references.append("GCP architecture described in documents")
-        
-        if 'api' in combined_content or 'rest' in combined_content or 'endpoint' in combined_content:
-            if 'security' in question_lower or 'access' in question_lower:
-                guidance_parts.append("Your API architecture requires proper authentication middleware and rate limiting")
-                specific_references.append("API endpoints described in your documents")
-            elif 'monitoring' in question_lower:
-                guidance_parts.append("For the APIs described in your documentation, implement comprehensive logging and monitoring")
-                specific_references.append("API services outlined in your architecture")
-        
-        if 'database' in combined_content or 'sql' in combined_content or 'nosql' in combined_content:
-            if 'security' in question_lower or 'access' in question_lower:
-                guidance_parts.append("Your database architecture requires encryption at rest and proper access controls")
-                specific_references.append("Database systems mentioned in your documents")
-            elif 'backup' in question_lower:
-                guidance_parts.append("For your database systems, ensure automated backups and point-in-time recovery")
-                specific_references.append("Database infrastructure from your documentation")
-        
-        if 'cloud' in combined_content:
-            if 'compliance' in question_lower:
-                guidance_parts.append("Your cloud infrastructure should align with relevant compliance frameworks")
-                specific_references.append("Cloud architecture outlined in your documents")
-        
-        if 'docker' in combined_content or 'container' in combined_content or 'kubernetes' in combined_content:
-            if 'security' in question_lower:
-                guidance_parts.append("Your containerized environment requires image scanning and runtime security")
-                specific_references.append("Container architecture from your documentation")
-        
-        # Fall back to topic-based guidance if no specific content matches
-        if not guidance_parts and all_topics:
-            if any(topic.lower() in ['cloud', 'aws', 'azure'] for topic in all_topics):
-                if 'security' in question_lower:
-                    guidance_parts.append("Based on your cloud architecture, consider implementing proper identity and access management")
-                    specific_references.append(f"Cloud topics: {', '.join([t for t in all_topics if t.lower() in ['cloud', 'aws', 'azure']][:2])}")
-            
-            if any(topic.lower() in ['api', 'application'] for topic in all_topics):
-                if 'security' in question_lower:
-                    guidance_parts.append("Your application architecture should implement proper authentication and authorization")
-                    specific_references.append(f"Application topics: {', '.join([t for t in all_topics if t.lower() in ['api', 'application']][:2])}")
-        
-        # Question-specific fallbacks with document context
-        if not guidance_parts:
-            if 'backup' in question_lower or 'recovery' in question_lower:
-                guidance_parts.append("Based on your system architecture, evaluate backup strategies and disaster recovery procedures")
-                specific_references.append("System architecture from your uploaded documents")
-            elif 'monitoring' in question_lower or 'logging' in question_lower:
-                guidance_parts.append("For your technical environment, implement comprehensive monitoring and logging")
-                specific_references.append("Technical details from your documentation")
-            elif 'access' in question_lower or 'authentication' in question_lower:
-                guidance_parts.append("Your system architecture requires proper access controls and authentication mechanisms")
-                specific_references.append("System design from your uploaded documents")
-            elif 'compliance' in question_lower:
-                guidance_parts.append("Based on your project requirements, ensure compliance with relevant regulatory frameworks")
-                specific_references.append("Project requirements from your documentation")
-        
-        # Final fallback - but still reference documents
-        if not guidance_parts:
-            if len(document_summaries) > 0:
-                guidance_parts.append(f"Based on your {document_summaries[0]['filename']} and project architecture, consider the security and operational requirements specific to your environment")
-                specific_references.append(f"Project details from {len(document_summaries)} uploaded document(s)")
-            else:
-                guidance_parts.append("Consider your system's technical architecture, security requirements, and operational processes")
-                specific_references.append("General TRA best practices")
-        
-        # Combine guidance
-        technical_guidance = ". ".join(guidance_parts)
-        if len(technical_guidance) > 250:
-            technical_guidance = technical_guidance[:250] + "..."
-
-        logger.info(f"[FALLBACK DEBUG] Generated guidance: {technical_guidance[:100]}...")
-        
-        return {
-            "has_suggestion": True,
-            "technical_guidance": technical_guidance,
-            "confidence": "medium" if specific_references else "low",
-            "reasoning": f"Analysis of your project documentation combined with TRA question context",
-            "supporting_context": specific_references[:3] if specific_references else [f"General analysis of {len(document_summaries)} document(s)"]
-        }
-        
-    except Exception as e:
-        import traceback
-        logger.error(f"[FALLBACK DEBUG] Error in fallback: {e}")
-        logger.error(f"[FALLBACK DEBUG] Traceback: {traceback.format_exc()}")
-        # Ultimate fallback - but still try to reference documents
-        doc_ref = f"your {document_summaries[0]['filename']}" if document_summaries else "your system"
-        return {
-            "has_suggestion": True,
-            "technical_guidance": f"Based on {doc_ref}, consider the technical architecture, security requirements, and operational processes relevant to this question.",
-            "confidence": "low",
-            "reasoning": "General technical guidance based on your uploaded documentation",
-            "supporting_context": [f"Analysis of {len(document_summaries)} document(s)" if document_summaries else "General TRA considerations"]
-        }
+    return {
+        "has_suggestion": True,
+        "technical_guidance": f"No information about {topic} in documentation",
+        "confidence": "low",
+        "reasoning": "Could not find relevant information in uploaded documents",
+        "supporting_context": []
+    }
 
 
 def _generate_answer_suggestion(
