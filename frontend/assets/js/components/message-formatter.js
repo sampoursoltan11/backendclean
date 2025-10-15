@@ -95,7 +95,8 @@ export class MessageFormatter {
       return this.formatOptionButtons(content);
     }
 
-    // Regular message formatting
+    // Regular message formatting - remove markers before display
+    formatted = this.removeQuestionTypeMarkers(formatted);
     return this.formatRegularMessage(formatted);
   }
 
@@ -152,6 +153,15 @@ export class MessageFormatter {
     return backendQuestionType === 'text' || backendQuestionType === 'textarea' ||
            (!backendQuestionType && !hasOptions && !hasRiskAreaOptions && !hasPostQualifyingOptions &&
             (isActualQuestion || this.looksLikeAQuestion(content)));
+  }
+
+  /**
+   * Remove backend question type markers from content
+   * @param {string} content - Content with potential markers
+   * @returns {string} Content with markers removed
+   */
+  removeQuestionTypeMarkers(content) {
+    return content.replace(/\[QUESTION_TYPE:(text|textarea|select|multiselect)\]/gi, '');
   }
 
   /**
@@ -368,6 +378,9 @@ export class MessageFormatter {
 
     // Style the main question line
     let contentStyled = this.styleQuestionTitle(content, formatted);
+
+    // Remove question type markers before display
+    contentStyled = this.removeQuestionTypeMarkers(contentStyled);
 
     const progressBarHtml = this.extractProgressBar(content);
 

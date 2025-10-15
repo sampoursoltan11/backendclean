@@ -65,7 +65,7 @@ export class Search {
     }
 
     try {
-      const backendHost = BACKEND_CONFIG.getHost();
+      const backendHost = BACKEND_CONFIG.getBackendHost();
       const url = `http://${backendHost}${API_ENDPOINTS.assessments.search}?query=${encodeURIComponent(query)}&limit=10`;
 
       debugLog(`[SEARCH] Making request to: ${url}`);
@@ -164,7 +164,7 @@ export class Search {
 
     // Check if TRA ID exists
     try {
-      const backendHost = BACKEND_CONFIG.getHost();
+      const backendHost = BACKEND_CONFIG.getBackendHost();
       const response = await fetch(`http://${backendHost}${API_ENDPOINTS.assessments.details(trimmedId)}`);
 
       if (response.ok) {

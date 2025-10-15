@@ -91,9 +91,10 @@ class TraAssessment(BaseEntity):
     
     # Assessment metadata
     title: Optional[str] = Field(None, description="Assessment title")
+    project_name: Optional[str] = Field(None, description="Project name (searchable)")
     description: Optional[str] = Field(None, description="Assessment description")
     technology_type: Optional[str] = Field(None, description="Type of technology being assessed")
-    
+
     # NEW: Project metadata for better tracking
     system_id: Optional[str] = Field(None, description="System/Project ID for tracking")
     classification: Optional[str] = Field(None, description="Data classification (e.g., Confidential, Public)")

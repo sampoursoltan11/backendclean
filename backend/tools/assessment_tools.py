@@ -145,6 +145,7 @@ async def create_assessment(
             assessment_id=assessment_id,
             session_id=session_id,
             title=project_name,
+            project_name=project_name,  # Populate both title and project_name for searchability
             description=description,
             system_id=system_id,
             classification=classification,
