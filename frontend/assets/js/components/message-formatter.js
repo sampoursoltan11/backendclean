@@ -207,23 +207,40 @@ export class MessageFormatter {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
 
+    // Color palette for risk areas
+    const colors = [
+      { bg: '#3b82f6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.414-4.414a2 2 0 010 2.828L11.828 21H9v-2.828l8.586-8.586a2 2 0 012.828 0z"></path>' },
+      { bg: '#10b981', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>' },
+      { bg: '#f59e0b', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>' },
+      { bg: '#8b5cf6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>' },
+      { bg: '#ec4899', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>' },
+      { bg: '#06b6d4', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>' },
+      { bg: '#ef4444', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>' },
+      { bg: '#14b8a6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' }
+    ];
+
     let buttonsHtml = `
       <div style="width: 100%;">
         <div style="margin-bottom: 16px;">${introText}</div>
-        <div style="margin-bottom: 12px; font-size: 1rem; font-weight: 500; color: #374151;">Choose a risk area to start with:</div>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="margin-bottom: 16px; font-size: 1rem; font-weight: 600; color: #111827;">Choose a risk area to start with:</div>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
     `;
 
     riskAreas.forEach((riskArea, idx) => {
+      const color = colors[idx % colors.length];
       buttonsHtml += `
         <button onclick="window.populateInput('start answering ${riskArea}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
-                style="padding: 16px 20px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 114, 128, 0.3); transition: all 0.2s;"
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(107, 114, 128, 0.4)'"
-                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 6px rgba(107, 114, 128, 0.3)'">
+                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                onmouseover="this.style.borderColor='${color.bg}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
+                onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
           <div style="display: flex; align-items: center;">
-            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold;">${idx + 1}</div>
-            <div>
-              <div style="font-weight: 700;">${riskArea}</div>
+            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${color.bg}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
+              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${color.icon}
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: #111827; font-size: 1rem;">${riskArea}</div>
             </div>
           </div>
         </button>
@@ -232,7 +249,7 @@ export class MessageFormatter {
 
     buttonsHtml += `
         </div>
-        <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-left: 4px solid #6b7280; border-radius: 6px; font-size: 0.875rem; color: #374151;">
+        <div style="margin-top: 16px; padding: 12px 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; font-size: 0.875rem; color: #1e40af;">
           <strong>💡 Tip:</strong> Click a risk area above to start answering questions for that area
         </div>
       </div>
@@ -459,15 +476,58 @@ export class MessageFormatter {
       .replace(/\n/g, '<br>');
 
     // Determine button labels based on which pattern matched
+    // Order: A = Upload Documents, B = Answer Qualifying Questions, C = Select Risk Areas
     const buttonA = hasPostQualifyingOptions ?
-      { label: 'Start Answering Questions', desc: 'Begin answering questions for identified risk areas', value: 'start questions' } :
-      { label: 'Upload Documents', desc: 'AI analyzes documents to recommend risk areas', value: 'A' };
+      {
+        label: 'Start Answering Questions',
+        desc: 'Begin answering questions for identified risk areas',
+        value: 'start questions',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        bgColor: '#3b82f6',
+        hoverColor: '#2563eb'
+      } :
+      {
+        label: 'Upload Documents',
+        desc: 'AI analyzes documents to recommend risk areas',
+        value: 'A',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>',
+        bgColor: '#10b981',
+        hoverColor: '#059669'
+      };
     const buttonB = hasPostQualifyingOptions ?
-      { label: 'Add More Risk Areas', desc: 'Manually add additional risk areas', value: 'add more risk areas' } :
-      { label: 'Select from Standard Risk Areas', desc: 'Manual selection from predefined list', value: 'B' };
+      {
+        label: 'Add More Risk Areas',
+        desc: 'Manually add additional risk areas',
+        value: 'add more risk areas',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>',
+        bgColor: '#8b5cf6',
+        hoverColor: '#7c3aed'
+      } :
+      {
+        label: 'Answer Qualifying Questions',
+        desc: 'AI asks qualifying questions to identify areas',
+        value: 'C',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>',
+        bgColor: '#ec4899',
+        hoverColor: '#db2777'
+      };
     const buttonC = hasPostQualifyingOptions ?
-      { label: 'View Assessment Status', desc: 'See your assessment progress', value: 'status' } :
-      { label: 'Answer AI Questions', desc: 'AI asks qualifying questions to identify areas', value: 'C' };
+      {
+        label: 'View Assessment Status',
+        desc: 'See your assessment progress',
+        value: 'status',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>',
+        bgColor: '#06b6d4',
+        hoverColor: '#0891b2'
+      } :
+      {
+        label: 'Select from Standard Risk Areas',
+        desc: 'Manual selection from predefined list',
+        value: 'B',
+        icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>',
+        bgColor: '#f59e0b',
+        hoverColor: '#d97706'
+      };
 
     // Button A handler: if post-qualifying, send message; otherwise open file dialog
     const buttonAOnclick = hasPostQualifyingOptions ?
@@ -476,47 +536,62 @@ export class MessageFormatter {
 
     return `
       <div>${introText}</div>
-      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px;">
         <button onclick="${buttonAOnclick}"
-                style="padding: 16px 20px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 114, 128, 0.3); transition: all 0.2s;"
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(107, 114, 128, 0.4)'"
-                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 6px rgba(107, 114, 128, 0.3)'">
-          <div style="display: flex; align-items: center;">
-            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold;">A</div>
-            <div>
-              <div style="font-weight: 700; margin-bottom: 4px;">${buttonA.label}</div>
-              <div style="font-size: 0.8rem; opacity: 0.9;">${buttonA.desc}</div>
+                class="option-button"
+                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                onmouseover="this.style.borderColor='${buttonA.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
+                onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
+          <div style="display: flex; align-items: start;">
+            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonA.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
+              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${buttonA.icon}
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonA.label}</div>
+              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonA.desc}</div>
             </div>
           </div>
         </button>
 
         <button onclick="window.populateInput('${buttonB.value}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
-                style="padding: 16px 20px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 114, 128, 0.3); transition: all 0.2s;"
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(107, 114, 128, 0.4)'"
-                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 6px rgba(107, 114, 128, 0.3)'">
-          <div style="display: flex; align-items: center;">
-            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold;">B</div>
-            <div>
-              <div style="font-weight: 700; margin-bottom: 4px;">${buttonB.label}</div>
-              <div style="font-size: 0.8rem; opacity: 0.9;">${buttonB.desc}</div>
+                class="option-button"
+                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                onmouseover="this.style.borderColor='${buttonB.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
+                onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
+          <div style="display: flex; align-items: start;">
+            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonB.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
+              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${buttonB.icon}
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonB.label}</div>
+              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonB.desc}</div>
             </div>
           </div>
         </button>
 
         <button onclick="window.populateInput('${buttonC.value}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
-                style="padding: 16px 20px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; border: none; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 114, 128, 0.3); transition: all 0.2s;"
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(107, 114, 128, 0.4)'"
-                onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 6px rgba(107, 114, 128, 0.3)'">
-          <div style="display: flex; align-items: center;">
-            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold;">C</div>
-            <div>
-              <div style="font-weight: 700; margin-bottom: 4px;">${buttonC.label}</div>
-              <div style="font-size: 0.8rem; opacity: 0.9;">${buttonC.desc}</div>
+                class="option-button"
+                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
+                onmouseover="this.style.borderColor='${buttonC.bgColor}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
+                onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
+          <div style="display: flex; align-items: start;">
+            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${buttonC.bgColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
+              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${buttonC.icon}
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; color: #111827; margin-bottom: 4px; font-size: 1rem;">${buttonC.label}</div>
+              <div style="font-size: 0.85rem; color: #6b7280; line-height: 1.4;">${buttonC.desc}</div>
             </div>
           </div>
         </button>
       </div>
-      <div style="margin-top: 16px; padding: 12px; background: #f9fafb; border-left: 4px solid #6b7280; border-radius: 6px; font-size: 0.875rem; color: #374151;">
+      <div style="margin-top: 16px; padding: 12px 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; font-size: 0.875rem; color: #1e40af;">
         <strong>💡 Tip:</strong> Click any option above to proceed with that method
       </div>
     `;
@@ -532,6 +607,30 @@ export class MessageFormatter {
     let formatted = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
+
+    // Simple styling for assessment creation message
+    if (formatted.includes('Assessment Created Successfully')) {
+      // Just make the text bold and slightly larger
+      formatted = formatted.replace(
+        /✅\s*Assessment Created Successfully!/g,
+        '<strong style="font-size: 1.1em; color: #10b981;">✅ Assessment Created Successfully!</strong>'
+      );
+
+      formatted = formatted.replace(
+        /(📋\s*TRA Number:)/g,
+        '<strong>$1</strong>'
+      );
+
+      formatted = formatted.replace(
+        /(📁\s*Project Name:)/g,
+        '<strong>$1</strong>'
+      );
+
+      formatted = formatted.replace(
+        /(🏢\s*Business Unit:)/g,
+        '<strong>$1</strong>'
+      );
+    }
 
     // Step 2: Handle "No confident AI suggestion" case
     formatted = formatted.replace(
