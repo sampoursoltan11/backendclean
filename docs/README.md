@@ -25,6 +25,7 @@ Essential guides to get you up and running quickly.
 
 | Document | Description | Read Time |
 |----------|-------------|-----------|
+| [QUICK_START.md](getting-started/QUICK_START.md) | Quick start guide | 3 min |
 | [QUICK_REFERENCE.md](getting-started/QUICK_REFERENCE.md) | Quick command reference | 2 min |
 | [RUNNING_LOCALLY.md](getting-started/RUNNING_LOCALLY.md) | Complete local setup guide | 5 min |
 | [MAKEFILE_GUIDE.md](getting-started/MAKEFILE_GUIDE.md) | Comprehensive Makefile reference | 10 min |
@@ -104,11 +105,12 @@ Testing documentation, results, and guides.
 | Document | Description | Key Info |
 |----------|-------------|----------|
 | [TESTING_COMPLETE.md](testing/TESTING_COMPLETE.md) | Complete testing summary | Quick reference |
+| [TEST_RESULTS.md](testing/TEST_RESULTS.md) | Comprehensive test results | All systems tested |
 
 **Related:**
 - Frontend tests: See `frontend/FRONTEND_TEST_RESULTS.md`
 - Backend tests: See `backend/TEST_RESULTS.md`
-- Test scripts: See `/scripts/test_frontend.js` and `/scripts/test_backend.sh`
+- Test scripts: See `backend/tests/test_websocket_connection.py` and `frontend/test_websocket.html`
 
 ---
 

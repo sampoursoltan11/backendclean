@@ -95,11 +95,14 @@ scripts/
 └── check_gsi_status.sh    # Monitor GSI status
 
 docs/
-├── RUNNING_LOCALLY.md     # Detailed local setup guide
-├── TEST_RESULTS.md        # Test execution results
-├── GSI_OPTIMIZATION_COMPLETE.md      # Performance optimization
-├── INFRASTRUCTURE_CODE_ALIGNMENT.md  # Infrastructure verification
-└── GSI_IMPLEMENTATION_GUIDE.md       # GSI setup guide
+├── getting-started/
+│   ├── QUICK_START.md     # Quick start guide
+│   └── MAKEFILE_GUIDE.md  # Makefile command reference
+├── testing/
+│   └── TEST_RESULTS.md    # Test execution results
+├── frontend/              # Frontend documentation
+├── backend/              # Backend documentation
+└── infrastructure/       # Infrastructure guides
 
 infrastructure/terraform/  # Complete Terraform IaC
 ```
@@ -285,10 +288,10 @@ This codebase has been cleaned and optimized:
 
 | Document | Description |
 |----------|-------------|
-| [RUNNING_LOCALLY.md](docs/RUNNING_LOCALLY.md) | Complete local setup guide |
-| [TEST_RESULTS.md](docs/TEST_RESULTS.md) | Test execution results |
-| [GSI_OPTIMIZATION_COMPLETE.md](docs/GSI_OPTIMIZATION_COMPLETE.md) | Performance optimization details |
-| [INFRASTRUCTURE_CODE_ALIGNMENT.md](docs/INFRASTRUCTURE_CODE_ALIGNMENT.md) | Infrastructure verification |
+| [QUICK_START.md](docs/getting-started/QUICK_START.md) | Quick start guide |
+| [MAKEFILE_GUIDE.md](docs/getting-started/MAKEFILE_GUIDE.md) | Makefile command reference |
+| [TEST_RESULTS.md](docs/testing/TEST_RESULTS.md) | Comprehensive test results |
+| [Frontend Connection Fix](docs/frontend/FRONTEND_BACKEND_CONNECTION_FIX.md) | Frontend-backend setup |
 | [Terraform README](infrastructure/terraform/README.md) | Infrastructure deployment guide |
 
 ## Development

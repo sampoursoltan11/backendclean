@@ -1,0 +1,59 @@
+// Simple store initialization that runs before Alpine
+// This creates a minimal store that will be replaced by the full one from main.js
+
+document.addEventListener('alpine:init', () => {
+    console.log('[TRA] Alpine:init fired - registering placeholder store');
+
+    // Register a placeholder store
+    Alpine.store('chat', {
+        // Connection state
+        connected: false,
+        socket: null,
+        sessionId: 'temp_' + Date.now(),
+        sessionContext: {},
+
+        // Message state
+        messages: [],
+        currentMessage: '',
+
+        // File upload state
+        uploadedFiles: [],
+        traIdForUpload: '',
+        traIdValid: null,
+        traIdValidationMessage: '',
+        isValidatingTraId: false,
+        selectedTraDetails: null,
+
+        // Search state
+        searchQuery: '',
+        searchResults: [],
+        isSearching: false,
+        showNotification: false,
+
+        // Document summary query state
+        docQueryTraId: '',
+        documentSummaries: [],
+        docQueryResult: {},
+        isQueryingDocs: false,
+        docQueryMessage: '',
+
+        // Placeholder init
+        init() {
+            console.log('[TRA] Placeholder store init called');
+            this.sessionId = 'enterprise_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        },
+
+        // Placeholder sendMessage
+        sendMessage() {
+            console.log('[TRA] Placeholder sendMessage - waiting for main.js to load full store');
+        },
+
+        // Other placeholder methods
+        addMessage() {},
+        performSearch() {},
+        validateTraId() {},
+        selectAssessment() {}
+    });
+
+    console.log('[TRA] Placeholder store registered');
+});

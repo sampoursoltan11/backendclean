@@ -4,8 +4,8 @@
  * @module services/websocket
  */
 
-import { BACKEND_CONFIG, API_ENDPOINTS, WS_CONFIG, WS_MESSAGE_TYPES, WS_STATES } from '../config/env.js';
-import { debugLog } from '../config/env.js';
+import { BACKEND_CONFIG, API_ENDPOINTS, WS_CONFIG, debugLog } from '../config/env.js';
+import { WS_MESSAGE_TYPES, WS_STATES } from '../utils/constants.js';
 
 /**
  * WebSocket Service Class
@@ -33,7 +33,12 @@ class WebSocketService {
       this.sessionId = sessionId;
       this.isIntentionallyClosed = false;
 
-      const wsUrl = `${BACKEND_CONFIG.getWsUrl()}${API_ENDPOINTS.ws[variant](sessionId)}`;
+      // In development, use relative path for Vite proxy; in production, use absolute WebSocket URL
+      const isDevelopment = window.location.hostname === 'localhost';
+      const wsPath = API_ENDPOINTS.ws[variant](sessionId);
+      const wsUrl = isDevelopment
+        ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${wsPath}`
+        : `${BACKEND_CONFIG.getWsUrl()}${wsPath}`;
       debugLog(`Connecting to WebSocket: ${wsUrl}`);
 
       try {

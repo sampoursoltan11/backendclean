@@ -11,20 +11,20 @@
     <!-- External CSS -->
     <link rel="stylesheet" href="/css/main.css">
 
-    <!-- Alpine.js (CDN) - Will be started manually by main.js after stores are registered -->
-    <script>
-        // Tell Alpine to wait for manual start
-        window.deferLoadingAlpine = (callback) => {
-            window.startAlpine = callback;
-        };
-    </script>
-    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- DOMPurify for sanitization (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+    <!-- Initialize placeholder store BEFORE Alpine loads -->
+    <script src="/init-store.js"></script>
+
+    <!-- Alpine.js (CDN) -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+    <!-- Load main.js to enhance the store after Alpine starts -->
+    <script type="module" src="/js/main.js"></script>
 </head>
 <body class="bg-gray-50 font-sans antialiased">
     <div x-data="$store.chat" x-init="init()" class="flex h-screen">
@@ -355,8 +355,5 @@
             </div>
         </div>
     </div>
-
-    <!-- External JavaScript (type="module" for ES6 modules) -->
-    <script type="module" src="/js/main.js"></script>
 </body>
 </html>

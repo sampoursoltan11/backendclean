@@ -4,8 +4,8 @@
  * @module services/api
  */
 
-import { BACKEND_CONFIG, API_ENDPOINTS, HTTP_STATUS, ERROR_MESSAGES } from '../config/env.js';
-import { debugLog } from '../config/env.js';
+import { BACKEND_CONFIG, API_ENDPOINTS, debugLog } from '../config/env.js';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../utils/constants.js';
 
 /**
  * API Service Class
