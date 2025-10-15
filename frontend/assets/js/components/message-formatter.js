@@ -51,6 +51,11 @@ export class MessageFormatter {
     // Remove generic helper sentence globally
     formatted = formatted.replace(/(?:<br>|<br>)?\s*You can accept the suggestion, pick an option, or provide your own answer\.?(?:\s*(?:<br>|<br>))?/gi, '');
 
+    // Check for risk area selection (checkboxes - must be before buttons check)
+    if (this.isRiskAreaSelection(content)) {
+      return this.formatRiskAreaSelection(content);
+    }
+
     // Check for risk area buttons
     if (this.isRiskAreaButtons(content)) {
       return this.formatRiskAreaButtons(content);
@@ -98,6 +103,15 @@ export class MessageFormatter {
     // Regular message formatting - remove markers before display
     formatted = this.removeQuestionTypeMarkers(formatted);
     return this.formatRegularMessage(formatted);
+  }
+
+  /**
+   * Check if message contains risk area selection checkboxes
+   * @param {string} content - Message content
+   * @returns {boolean}
+   */
+  isRiskAreaSelection(content) {
+    return content.match(/RISK_AREA_SELECTION:(.+?)(?:\n|$)/) !== null;
   }
 
   /**
@@ -241,6 +255,102 @@ export class MessageFormatter {
         </div>
         <div style="margin-top: 14px; padding: 10px 14px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">
           <strong>💡 Tip:</strong> Click a risk area above to start answering questions for that area
+        </div>
+      </div>
+    `;
+
+    return buttonsHtml;
+  }
+
+  /**
+   * Format risk area selection with checkboxes (for manual selection before adding)
+   * @param {string} content - Message content
+   * @returns {string} Formatted HTML with checkboxes
+   */
+  formatRiskAreaSelection(content) {
+    const riskAreaSelectionMatch = content.match(/RISK_AREA_SELECTION:(.+?)(?:\n|$)/);
+    const riskAreas = riskAreaSelectionMatch[1].split('|').map(ra => ra.trim());
+    const introText = content.split('RISK_AREA_SELECTION:')[0]
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+
+    // Generate unique ID for this selection group
+    const selectionId = 'risk-area-selection-' + Date.now();
+
+    // Simple neutral icon for all risk areas
+    const neutralIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>';
+
+    let buttonsHtml = `
+      <div style="width: 100%;" id="${selectionId}">
+        <div style="margin-bottom: 16px;">${introText}</div>
+        <div style="margin-bottom: 12px; font-size: 1rem; font-weight: 600; color: #111827;">Select one or more risk areas:</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+    `;
+
+    riskAreas.forEach((riskArea, index) => {
+      const checkboxId = `${selectionId}-checkbox-${index}`;
+      buttonsHtml += `
+        <label for="${checkboxId}"
+               class="risk-area-checkbox-label"
+               style="flex: 1 1 calc(50% - 5px); min-width: 200px; padding: 14px 16px; background: white; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); display: block;"
+               onmouseover="this.style.borderColor='#6b7280'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.1)'; this.style.background='#f9fafb'"
+               onmouseout="if (!this.querySelector('input').checked) { this.style.borderColor='#d1d5db'; this.style.transform=''; this.style.boxShadow='0 1px 3px rgba(0, 0, 0, 0.05)'; this.style.background='white'; }">
+          <div style="display: flex; align-items: center;">
+            <input type="checkbox"
+                   id="${checkboxId}"
+                   name="risk-area-selection"
+                   value="${riskArea}"
+                   style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer; accent-color: #3b82f6;"
+                   onchange="
+                     const label = this.parentElement.parentElement;
+                     if (this.checked) {
+                       label.style.borderColor = '#3b82f6';
+                       label.style.background = '#eff6ff';
+                       label.style.borderWidth = '2px';
+                     } else {
+                       label.style.borderColor = '#d1d5db';
+                       label.style.background = 'white';
+                     }
+                   ">
+            <div style="flex-shrink: 0; width: 32px; height: 32px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg style="width: 16px; height: 16px; color: #6b7280;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${neutralIcon}
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${riskArea}</div>
+            </div>
+          </div>
+        </label>
+      `;
+    });
+
+    buttonsHtml += `
+        </div>
+        <div style="margin-top: 16px;">
+          <button onclick="
+            const container = document.getElementById('${selectionId}');
+            const checkboxes = container.querySelectorAll('input[name=\\'risk-area-selection\\']:checked');
+            const selected = Array.from(checkboxes).map(cb => cb.value);
+            if (selected.length === 0) {
+              alert('Please select at least one risk area');
+              return;
+            }
+            const message = selected.join(', ');
+            window.populateInput(message);
+            setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);
+          "
+          style="width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);"
+          onmouseover="this.style.background='linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.4)'"
+          onmouseout="this.style.background='linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'; this.style.transform=''; this.style.boxShadow='0 2px 6px rgba(59, 130, 246, 0.3)'">
+            <svg style="width: 18px; height: 18px; display: inline; vertical-align: middle; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Add Selected Risk Areas
+          </button>
+        </div>
+        <div style="margin-top: 14px; padding: 10px 14px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">
+          <strong>💡 Tip:</strong> Select multiple risk areas by checking the boxes, then click "Add Selected Risk Areas"
         </div>
       </div>
     `;

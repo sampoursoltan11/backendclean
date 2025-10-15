@@ -149,15 +149,16 @@ Session ID: {self.session_id}
             if result.get('success'):
                 risk_areas = result.get('risk_areas', [])
                 assessment_id = context.get('assessment_id', '')
-                
-                msg = [f"Here are the available standard risk areas:\n"]
-                for idx, ra in enumerate(risk_areas, 1):
-                    msg.append(f"{idx}. {ra.get('icon', '')} {ra.get('name')} - {ra.get('description', '')}")
-                
-                msg.append(f"\nWhich risk area(s) would you like to add to assessment {assessment_id}?")
-                msg.append("You can say the name (e.g., 'Data Security') or number (e.g., '1'), and you can select multiple areas.")
-                
-                context['last_message'] = "\n".join(msg)
+
+                # Format risk areas as pipe-separated list for RISK_AREA_SELECTION format (checkboxes)
+                # This will be parsed by the frontend message formatter to create checkbox selection
+                risk_area_names = '|'.join([ra.get('name', '') for ra in risk_areas])
+
+                msg = f"Here are the available standard risk areas:\n\n"
+                msg += f"RISK_AREA_SELECTION:{risk_area_names}\n\n"
+                msg += f"Select one or more risk areas to add to assessment {assessment_id}."
+
+                context['last_message'] = msg
                 context['available_risk_areas'] = risk_areas
                 return context['last_message']
             else:
@@ -167,27 +168,41 @@ Session ID: {self.session_id}
         if context.get('available_risk_areas'):
             available_risk_areas = context['available_risk_areas']
             assessment_id = context.get('assessment_id', '')
-            
+
             # Try to match by number (e.g., "1", "2", "1 and 3")
             numbers = re.findall(r'\b(\d+)\b', message_lower)
             selected_areas = []
-            
+
             if numbers:
                 for num_str in numbers:
                     idx = int(num_str) - 1
                     if 0 <= idx < len(available_risk_areas):
                         selected_areas.append(available_risk_areas[idx])
             else:
-                # Try to match by name (case-insensitive, check if risk area name appears in message)
-                for ra in available_risk_areas:
-                    ra_name_lower = ra['name'].lower()
-                    # Check if the full risk area name or significant parts appear in the message
-                    # Split risk area name into words and check if they appear consecutively or nearby
-                    name_words = ra_name_lower.split()
-                    
-                    # Simple check: if all words from the risk area name appear in the message
-                    if all(word in message_lower for word in name_words):
-                        selected_areas.append(ra)
+                # Try to match by name (case-insensitive)
+                # Handle both comma-separated (from checkboxes) and natural language
+                # Split by comma first to handle "Data Security, AI Risk, Third-Party Risk"
+                potential_names = [s.strip() for s in message.split(',')]
+
+                for potential_name in potential_names:
+                    potential_name_lower = potential_name.lower()
+
+                    # Try exact or close match with each available risk area
+                    for ra in available_risk_areas:
+                        ra_name_lower = ra['name'].lower()
+
+                        # Exact match
+                        if ra_name_lower == potential_name_lower:
+                            if ra not in selected_areas:
+                                selected_areas.append(ra)
+                            break
+
+                        # Check if all words from the risk area name appear in the potential name
+                        name_words = ra_name_lower.split()
+                        if all(word in potential_name_lower for word in name_words):
+                            if ra not in selected_areas:
+                                selected_areas.append(ra)
+                            break
             
             if selected_areas:
                 # Add the selected risk areas
@@ -217,15 +232,41 @@ Session ID: {self.session_id}
                     if assessment_result.get('success') and 'assessment' in assessment_result:
                         context['assessment'] = assessment_result['assessment']
                         logger.debug(f"Updated assessment in context with active_risk_areas: {assessment_result['assessment'].get('active_risk_areas')}")
-                    
+
                     context['available_risk_areas'] = None  # Clear the selection state
-                    msg = f"✅ Successfully added risk area(s): {', '.join(added)} to assessment {assessment_id}.\n\n"
-                    msg += "Would you like to:\n"
-                    msg += "1. Start answering questions for these risk areas\n"
-                    msg += "2. Add more risk areas\n"
-                    msg += "3. View current assessment status"
+
+                    # Follow the same flow as document upload: show RISK_AREA_BUTTONS for selection
+                    # Get decision tree for risk area mapping
+                    from backend.tools.question_tools import get_decision_tree
+                    decision_tree = get_decision_tree()
+                    risk_areas_raw = decision_tree.get('risk_areas', {})
+
+                    # Get the active risk areas from the updated assessment
+                    assessment = context['assessment']
+                    active_risk_areas = assessment.get('active_risk_areas', [])
+
+                    # Map IDs to names
+                    if isinstance(risk_areas_raw, dict):
+                        ra_map = {area_id: area_data.get('name', area_id) for area_id, area_data in risk_areas_raw.items()}
+                    else:
+                        ra_map = {ra['id']: ra['name'] for ra in risk_areas_raw}
+
+                    # Get names of active risk areas
+                    area_names = [ra_map.get(r, r) for r in active_risk_areas]
+
+                    # Create message with RISK_AREA_BUTTONS (same pattern as question_agent.py lines 278-288)
+                    msg = f"✅ Successfully added risk area(s): {', '.join(added)} to assessment {assessment_id}!\n\n"
+                    msg += "🎯 **Risk areas assigned!**\n\n"
+                    msg += "Select which risk area you'd like to start answering questions for:\n\n"
+                    msg += "RISK_AREA_BUTTONS:" + "|".join(area_names) + "\n"
+
+                    # Set context flags to prepare for risk area selection (same as question_agent.py)
                     context['last_message'] = msg
-                    logger.debug(f"Returning success message for risk area addition")
+                    context['active_risk_areas'] = area_names
+                    context['remaining_risk_area_ids'] = active_risk_areas
+                    context['awaiting_risk_area_selection'] = True
+
+                    logger.debug(f"Showing RISK_AREA_BUTTONS for {len(area_names)} areas")
                     return msg
                 else:
                     # Risk areas were selected but failed to add
