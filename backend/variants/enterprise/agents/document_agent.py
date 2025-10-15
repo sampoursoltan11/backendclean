@@ -3,6 +3,7 @@ Document Agent - Domain Expert for Document Processing & RAG
 Handles document uploads, analysis, risk area suggestions, and answer recommendations
 """
 
+import logging
 from typing import Dict, Any, AsyncIterator
 
 from strands import Agent
@@ -17,6 +18,8 @@ from backend.tools import (
     suggest_answer_from_context,
     upload_document_metadata,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentAgent:

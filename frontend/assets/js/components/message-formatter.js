@@ -618,11 +618,86 @@ export class MessageFormatter {
    * @returns {string} Formatted HTML
    */
   formatCompletionMessage(content) {
-    let completionMsg = content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
+    // Parse the completion message into sections
+    const lines = content.split('\n').filter(line => line.trim());
 
-    return `<div style="display: block; line-height: 1.8; text-align: left;">${completionMsg}</div>`;
+    let header = '';
+    let subheader = '';
+    let nextSteps = [];
+    let note = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Find main header (contains "You have completed all risk areas")
+      if (line.includes('You have completed all risk areas')) {
+        header = line.replace(/🎉\s*/, '').replace(/\*\*/g, '');
+      }
+      // Find subheader (first line before "Next Steps")
+      else if (line.includes('All questions for') && line.includes('are complete')) {
+        subheader = line.replace(/✅\s*/, '');
+      }
+      // Find next steps items (lines starting with •)
+      else if (line.startsWith('•')) {
+        nextSteps.push(line.substring(1).trim());
+      }
+      // Find note section
+      else if (line.includes('Note:') || line.includes('Finalizing will change')) {
+        note += line.replace(/\*\*Note:\*\*/, '<strong>Note:</strong>').replace(/\*\*/g, '') + ' ';
+      }
+    }
+
+    return `
+      <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 2px solid #10b981; border-radius: 16px; padding: 24px; margin: 16px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);">
+        <!-- Party icon and header -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="font-size: 48px; margin-bottom: 8px;">🎉</div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: #065f46; margin: 0;">
+            ${header || 'Assessment Complete!'}
+          </h3>
+          ${subheader ? `<p style="color: #047857; margin-top: 8px; font-size: 0.95rem;">${subheader}</p>` : ''}
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 2px; background: linear-gradient(90deg, transparent, #10b981, transparent); margin: 20px 0;"></div>
+
+        <!-- Next Steps Section -->
+        ${nextSteps.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 1rem; font-weight: 600; color: #065f46; margin-bottom: 12px; display: flex; align-items: center;">
+              <svg style="width: 20px; height: 20px; margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+              Next Steps:
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              ${nextSteps.map((step, idx) => `
+                <div style="background: white; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #10b981; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="width: 24px; height: 24px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; margin-right: 12px; flex-shrink: 0;">
+                    ${idx + 1}
+                  </div>
+                  <div style="color: #1f2937; font-size: 0.95rem;">
+                    ${step}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Note Section -->
+        ${note ? `
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; display: flex; align-items-start;">
+            <svg style="width: 20px; height: 20px; color: #f59e0b; margin-right: 12px; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <div style="color: #92400e; font-size: 0.9rem; line-height: 1.5;">
+              ${note}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
   }
 
   /**
