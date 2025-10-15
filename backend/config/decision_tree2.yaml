@@ -77,22 +77,22 @@ risk_areas:
       level: L2
       comments: Needs to allow for multiple Vendors, Question Set needs to be asked
         for each Vendor entered
-      question: Vendor Supplier name
+      question: what is the Vendor Supplier name?
       response_type: free-text
       required: true
     - id: TP-02
       level: L2
-      question: Vendor Contract name
+      question: What is the Vendor Contract name?
       response_type: free-text
       required: true
     - id: TP-03
       level: L2
-      question: 'Description: of the Engagement'
+      question: Can you describe the type of the Engagement?'
       response_type: free-text
       required: true
     - id: TP-04
       level: L2
-      question: Supplier Web Page
+      question: What is the Supplier Web Page?
       response_type: free-text
       required: false
     - id: TP-05
@@ -115,7 +115,7 @@ risk_areas:
     - id: TP-08
       level: L2
       question: 'If the Vendor will have direct access to BHP systems where will the
-        data be stored:'
+        data be stored?'
       response_type: free-text
       required: false
   data_privacy:
