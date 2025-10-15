@@ -149,6 +149,23 @@ class WebSocketService {
   }
 
   /**
+   * Clear all event listeners for a specific event type
+   * @param {string} event - Event name
+   */
+  clearListeners(event) {
+    if (this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+  }
+
+  /**
+   * Clear all event listeners
+   */
+  clearAllListeners() {
+    this.eventListeners.clear();
+  }
+
+  /**
    * Remove event listener
    * @param {string} event - Event name
    * @param {Function} listener - Listener function
@@ -253,7 +270,50 @@ class WebSocketService {
       default: return 'UNKNOWN';
     }
   }
+  /**
+   * Reset the service to initial state (for reconnections)
+   */
+  reset() {
+    debugLog('Resetting WebSocket service...');
+
+    // Close existing connection
+    if (this.socket) {
+      this.isIntentionallyClosed = true;
+      this.socket.close();
+      this.socket = null;
+    }
+
+    // Clear reconnection timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Reset state
+    this.sessionId = null;
+    this.reconnectAttempts = 0;
+    this.isIntentionallyClosed = false;
+
+    // IMPORTANT: Do NOT clear handlers - they should persist across reconnections
+    // The clearAllListeners() method is available if needed for full reset
+
+    debugLog('WebSocket service reset complete');
+  }
+}
+
+// Singleton instance
+let instance = null;
+
+/**
+ * Get WebSocket service singleton instance
+ * @returns {WebSocketService}
+ */
+function getWebSocketService() {
+  if (!instance) {
+    instance = new WebSocketService();
+  }
+  return instance;
 }
 
 // Export singleton instance
-export default new WebSocketService();
+export default getWebSocketService();

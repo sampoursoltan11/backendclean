@@ -51,6 +51,12 @@ export function createChatStore() {
      * Initialize the chat store
      */
     init() {
+      // Prevent double initialization
+      if (this._initialized) {
+        debugLog('Chat store already initialized, skipping...');
+        return;
+      }
+
       this.sessionId = 'enterprise_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
 
       debugLog('Initializing chat store with session ID:', this.sessionId);
@@ -66,7 +72,12 @@ export function createChatStore() {
 
       // Set up global helper functions
       this.setupGlobalHelpers();
+
+      // Mark as initialized
+      this._initialized = true;
     },
+
+    _initialized: false,
 
     /**
      * Initialize file uploader with callbacks
@@ -132,10 +143,13 @@ export function createChatStore() {
      */
     async connectWebSocket() {
       try {
+        // IMPORTANT: Clear existing listeners to prevent duplicate message handlers
+        websocketService.clearAllListeners();
+
         await websocketService.connect(this.sessionId, 'enterprise');
         this.connected = true;
 
-        // Set up message handler
+        // Set up message handler (only once after clearing)
         websocketService.on('message', (data) => {
           this.handleWebSocketMessage(data);
         });
