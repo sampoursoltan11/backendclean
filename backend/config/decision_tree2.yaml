@@ -187,8 +187,8 @@ risk_areas:
       required: true
     - id: AI-06
       level: L2
-      question: Who are the intended users of the AI system? please Specify the target
-        audience or user base!
+      question: Who are the intended users of the AI system and specify the target
+       audience or user base?
       response_type: free-text
       required: true
     - id: AI-09

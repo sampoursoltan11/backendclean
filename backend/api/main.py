@@ -549,7 +549,7 @@ async def get_assessment_documents(assessment_id: str):
     """
     try:
         db = get_db()
-        
+
         # Verify assessment exists
         assessment = await db.get_assessment(assessment_id)
         if not assessment:
@@ -560,10 +560,10 @@ async def get_assessment_documents(assessment_id: str):
                     "error": f"TRA ID {assessment_id} not found"
                 }
             )
-        
+
         # Get documents for this assessment
         documents = await db.get_documents_by_assessment(assessment_id)
-        
+
         # Format document summaries for frontend
         document_summaries = []
         for doc in documents:
@@ -577,10 +577,10 @@ async def get_assessment_documents(assessment_id: str):
                 "word_count": len(doc.get('content_summary', '').split()) if doc.get('content_summary') else 0
             }
             document_summaries.append(doc_info)
-        
+
         # Serialize timestamps
         serialized_docs = _serialize_datetimes(document_summaries)
-        
+
         return JSONResponse({
             "success": True,
             "assessment_id": assessment_id,
@@ -589,9 +589,43 @@ async def get_assessment_documents(assessment_id: str):
             "documents": serialized_docs,
             "message": f"Found {len(document_summaries)} document(s) for TRA {assessment_id}"
         })
-        
+
     except Exception as e:
         logger.error(f"Get assessment documents failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+@app.get("/api/assessments/{assessment_id}/progress")
+async def get_assessment_progress_api(assessment_id: str):
+    """
+    Get progress breakdown for an assessment, including per-risk-area completion.
+    Used by frontend to display progress bars during question answering.
+    """
+    try:
+        from backend.tools.status_tools import get_assessment_summary
+
+        # Call the existing tool function
+        result = await get_assessment_summary(assessment_id)
+
+        if not result.get('success'):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": result.get('error', 'Assessment not found')
+                }
+            )
+
+        # Serialize timestamps
+        serialized_result = _serialize_datetimes(result)
+
+        return JSONResponse(serialized_result)
+
+    except Exception as e:
+        logger.error(f"Get assessment progress failed: {e}")
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}

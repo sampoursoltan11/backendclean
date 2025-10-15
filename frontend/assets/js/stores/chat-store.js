@@ -47,6 +47,10 @@ export function createChatStore() {
     isQueryingDocs: false,
     docQueryMessage: '',
 
+    // Progress tracking state
+    currentAssessmentId: null,
+    assessmentProgress: null, // { overall: 45.2, areas: [{name, completion, answered, total}] }
+
     /**
      * Initialize the chat store
      */
@@ -193,6 +197,44 @@ export function createChatStore() {
             this.traIdForUpload = traMatch[0];
             this.traIdValid = true;
             this.traIdValidationMessage = 'Auto-populated from created assessment';
+
+            // Initialize progress tracking
+            this.currentAssessmentId = traMatch[0];
+            this.assessmentProgress = {
+              overall: 0,
+              areas: []
+            };
+            debugLog('[PROGRESS] Initialized progress tracking for:', this.currentAssessmentId);
+
+            // Fetch initial progress
+            this.fetchProgressBreakdown();
+          }
+        }
+
+        // Detect TRA ID in message and track progress
+        const traIdMatch = data.content.match(/TRA-\d{4}-[A-Z0-9]{6}/i);
+        if (traIdMatch && traIdMatch[0]) {
+          const detectedTraId = traIdMatch[0];
+
+          // Initialize progress tracking if not already set
+          if (!this.currentAssessmentId) {
+            this.currentAssessmentId = detectedTraId;
+            this.assessmentProgress = {
+              overall: 0,
+              areas: []
+            };
+            debugLog('[PROGRESS] Detected TRA ID in message:', detectedTraId);
+          }
+
+          // Fetch progress whenever we see a question or answer related message
+          if (this.currentAssessmentId === detectedTraId &&
+              (data.content.includes('QUESTION_TYPE:') ||
+               data.content.includes('Progress:') ||
+               data.content.includes('Overall Progress:') ||
+               data.content.includes('All questions for') ||
+               data.content.includes('are complete'))) {
+            debugLog('[PROGRESS] Triggering progress fetch for:', detectedTraId);
+            this.fetchProgressBreakdown();
           }
         }
 
@@ -501,6 +543,54 @@ export function createChatStore() {
       };
 
       debugLog('Global helpers set up');
+    },
+
+    /**
+     * Fetch detailed progress breakdown per risk area
+     */
+    async fetchProgressBreakdown() {
+      if (!this.currentAssessmentId) {
+        debugLog('[PROGRESS] No currentAssessmentId, skipping fetch');
+        return;
+      }
+
+      try {
+        const backendHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+        const url = `http://${backendHost}/api/assessments/${this.currentAssessmentId}/progress`;
+
+        debugLog('[PROGRESS] Fetching progress breakdown from:', url);
+
+        const response = await fetch(url);
+        debugLog('[PROGRESS] Response status:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          debugLog('[PROGRESS] Response data:', data);
+
+          if (data.success && data.risk_areas) {
+            this.assessmentProgress = {
+              assessmentId: data.assessment_id || this.currentAssessmentId,
+              title: data.title || '',
+              currentState: data.current_state || 'draft',
+              overall: data.completion_percentage || 0,
+              areas: data.risk_areas.map(area => ({
+                name: area.name,
+                completion: area.completion || 0,
+                answered: area.answered || 0,
+                total: area.total || 0
+              }))
+            };
+            debugLog('[PROGRESS] Updated progress breakdown:', this.assessmentProgress);
+          } else {
+            debugLog('[PROGRESS] Data structure invalid:', data);
+          }
+        } else {
+          const errorText = await response.text();
+          debugLog('[PROGRESS] Response not OK:', response.status, errorText);
+        }
+      } catch (error) {
+        debugLog('[PROGRESS] Error fetching progress breakdown:', error);
+      }
     }
   };
 }

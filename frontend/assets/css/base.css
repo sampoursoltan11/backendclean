@@ -59,7 +59,7 @@
   /* Gradient Colors */
   --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   --gradient-secondary: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  --gradient-user: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  --gradient-user: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
   --gradient-bot: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
   --gradient-system: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   --gradient-ai-suggestion: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
