@@ -350,9 +350,13 @@ Session ID: {self.session_id}
             if missing:
                 context['missing_fields'] = missing
                 context['waiting_for_project_name'] = True
+
+                # Format the required fields list nicely
+                fields_list = "\n".join(f"**{i+1}. {field}**" for i, field in enumerate(missing))
+
                 context['last_message'] = (
-                    "To create a new assessment, please provide the following required information:\n" +
-                    "\n".join(f"- {field}" for field in missing)
+                    "To create a new assessment, please provide the following required information:\n\n" +
+                    fields_list
                 )
                 return context['last_message']
             
