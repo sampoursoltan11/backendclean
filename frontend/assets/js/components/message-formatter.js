@@ -207,40 +207,30 @@ export class MessageFormatter {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
 
-    // Color palette for risk areas
-    const colors = [
-      { bg: '#3b82f6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.414-4.414a2 2 0 010 2.828L11.828 21H9v-2.828l8.586-8.586a2 2 0 012.828 0z"></path>' },
-      { bg: '#10b981', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>' },
-      { bg: '#f59e0b', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>' },
-      { bg: '#8b5cf6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>' },
-      { bg: '#ec4899', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>' },
-      { bg: '#06b6d4', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>' },
-      { bg: '#ef4444', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>' },
-      { bg: '#14b8a6', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' }
-    ];
+    // Simple neutral icon for all risk areas
+    const neutralIcon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>';
 
     let buttonsHtml = `
       <div style="width: 100%;">
         <div style="margin-bottom: 16px;">${introText}</div>
-        <div style="margin-bottom: 16px; font-size: 1rem; font-weight: 600; color: #111827;">Choose a risk area to start with:</div>
-        <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="margin-bottom: 12px; font-size: 1rem; font-weight: 600; color: #111827;">Choose a risk area to start with:</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
     `;
 
-    riskAreas.forEach((riskArea, idx) => {
-      const color = colors[idx % colors.length];
+    riskAreas.forEach((riskArea) => {
       buttonsHtml += `
         <button onclick="window.populateInput('start answering ${riskArea}'); setTimeout(() => Alpine.\$data(document.querySelector('[x-data]')).sendMessage(), 100);"
-                style="padding: 18px 20px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; text-align: left; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);"
-                onmouseover="this.style.borderColor='${color.bg}'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'"
-                onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.05)'">
+                style="flex: 1 1 calc(50% - 5px); min-width: 200px; padding: 14px 16px; background: white; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);"
+                onmouseover="this.style.borderColor='#6b7280'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(0, 0, 0, 0.1)'; this.style.background='#f9fafb'"
+                onmouseout="this.style.borderColor='#d1d5db'; this.style.transform=''; this.style.boxShadow='0 1px 3px rgba(0, 0, 0, 0.05)'; this.style.background='white'">
           <div style="display: flex; align-items: center;">
-            <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${color.bg}; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px;">
-              <svg style="width: 20px; height: 20px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                ${color.icon}
+            <div style="flex-shrink: 0; width: 32px; height: 32px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg style="width: 16px; height: 16px; color: #6b7280;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${neutralIcon}
               </svg>
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 700; color: #111827; font-size: 1rem;">${riskArea}</div>
+              <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${riskArea}</div>
             </div>
           </div>
         </button>
@@ -249,7 +239,7 @@ export class MessageFormatter {
 
     buttonsHtml += `
         </div>
-        <div style="margin-top: 16px; padding: 12px 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; font-size: 0.875rem; color: #1e40af;">
+        <div style="margin-top: 14px; padding: 10px 14px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 0.85rem; color: #1e40af;">
           <strong>💡 Tip:</strong> Click a risk area above to start answering questions for that area
         </div>
       </div>

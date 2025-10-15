@@ -356,22 +356,16 @@ export class FileUploader {
       case 'success':
         if (result && result.auto_analyzed && result.risk_areas_added) {
           const riskAreas = result.risk_areas_added.join(', ');
-          return `✅ <strong>${filename}</strong> uploaded and analyzed!<br>` +
-                 `🤖 AI Summary generated (${result.word_count || 0} words)<br>` +
-                 `🏷️ Topics: ${(result.key_topics?.slice(0, 3).join(', ') || 'N/A')}<br>` +
-                 `💾 Saved to DynamoDB<br>` +
-                 `🎯 <strong>Auto-assigned Risk Areas: ${riskAreas}</strong><br>` +
-                 `✨ Ready to answer questions for these risk areas!`;
+          return `<strong style="color: #10b981;">✅ ${filename} uploaded and analyzed!</strong><br><br>` +
+                 `<strong>📊 AI Summary:</strong> ${result.word_count || 0} words<br>` +
+                 `<strong>🎯 Auto-assigned Risk Areas:</strong> ${riskAreas}`;
         } else if (result) {
           const wordCount = result.word_count || 0;
-          const topics = result.key_topics?.slice(0, 3).join(', ') || 'N/A';
-
-          return `✅ <strong>${filename}</strong> uploaded successfully!<br>` +
-                 `🤖 AI Summary generated (${wordCount} words)<br>` +
-                 `🏷️ Topics: ${topics}<br>` +
-                 `💾 Saved to DynamoDB - Ready for analysis!`;
+          return `<strong style="color: #10b981;">✅ ${filename} uploaded successfully!</strong><br><br>` +
+                 `<strong>📊 AI Summary:</strong> ${wordCount} words<br>` +
+                 `<strong>💾</strong> Saved to database`;
         } else {
-          return `✅ <strong>${filename}</strong> uploaded successfully!`;
+          return `<strong style="color: #10b981;">✅ ${filename} uploaded successfully!</strong>`;
         }
 
       case 'ready':
