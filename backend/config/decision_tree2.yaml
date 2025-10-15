@@ -176,19 +176,19 @@ risk_areas:
     questions:
     - id: AI-04
       level: L2
-      question: Application Description
+      question: Can you describe the Application?
       response_type: free-text
       required: true
     - id: AI-05
       level: L2
-      question: Objective - What is the main goal or function of the AI system? Describe
+      question: What is the main goal or function of the AI system? Describe
         the problem it aims to solve or the task it is designed to perform.
       response_type: free-text
       required: true
     - id: AI-06
       level: L2
-      question: Scope - Who are the intended users of the AI system? Specify the target
-        audience or user base.
+      question: Who are the intended users of the AI system? please Specify the target
+        audience or user base!
       response_type: free-text
       required: true
     - id: AI-09

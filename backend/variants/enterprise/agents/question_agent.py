@@ -413,7 +413,9 @@ Session ID: {session_id}
             
             # Compose helpful, context-rich response with progress indicator
             risk_area_name = ra_map.get(current_risk_area, current_risk_area)
-            # Add risk area indicator next to TRA number (on same line, no pin icon)
+            question_level = next_q.get('level', 'L1')  # Get level from question, default to L1
+
+            # Add risk area and level indicators next to TRA number (on same line, no pin icon)
             response = (
                 f"<div style='display: flex; align-items: center; gap: 8px; margin-bottom: 12px;'>"
                 f"<span style='font-weight: 600; font-size: 1.1rem;'>{assessment_id}</span>"
@@ -432,6 +434,10 @@ Session ID: {session_id}
                 f"<div style='display: inline-block; padding: 4px 10px; background: #374151; "
                 f"border: 1px solid #4b5563; border-radius: 5px;'>"
                 f"<span style='font-size: 0.75rem; color: #ffffff; font-weight: 600;'>{risk_area_name}</span>"
+                f"</div>"
+                f"<div style='display: inline-block; padding: 4px 10px; background: #6b7280; "
+                f"border: 1px solid #9ca3af; border-radius: 5px;'>"
+                f"<span style='font-size: 0.75rem; color: #ffffff; font-weight: 600;'>{question_level}</span>"
                 f"</div>"
                 f"</div>\n\n"
             )

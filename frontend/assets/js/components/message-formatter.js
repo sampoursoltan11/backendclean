@@ -391,18 +391,18 @@ export class MessageFormatter {
         <div class="question-title">${questionPart}</div>
         <div style="display: flex; gap: 16px; justify-content: center; margin-top: 20px;">
           <button onclick="(function(){ const c = Alpine.\$data(document.querySelector('[x-data]')); c.currentMessage = 'Yes'; c.sendMessage(); })();"
-                  style="min-width: 160px; padding: 14px 28px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s;"
-                  onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0, 0, 0, 0.15)'"
-                  onmouseout="this.style.background='#6b7280'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.1)'">
+                  style="min-width: 160px; padding: 14px 28px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2); transition: all 0.2s;"
+                  onmouseover="this.style.background='#059669'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.3)'"
+                  onmouseout="this.style.background='#10b981'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.2)'">
             <svg style="width: 16px; height: 16px; display: inline; margin-right: 8px; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
             </svg>
             Yes
           </button>
           <button onclick="(function(){ const c = Alpine.\$data(document.querySelector('[x-data]')); c.currentMessage = 'No'; c.sendMessage(); })();"
-                  style="min-width: 160px; padding: 14px 28px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s;"
-                  onmouseover="this.style.background='#4b5563'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0, 0, 0, 0.15)'"
-                  onmouseout="this.style.background='#6b7280'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.1)'">
+                  style="min-width: 160px; padding: 14px 28px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); transition: all 0.2s;"
+                  onmouseover="this.style.background='#dc2626'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(239, 68, 68, 0.3)'"
+                  onmouseout="this.style.background='#ef4444'; this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(239, 68, 68, 0.2)'">
             <svg style="width: 16px; height: 16px; display: inline; margin-right: 8px; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
