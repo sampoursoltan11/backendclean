@@ -3,6 +3,7 @@ Assessment Agent - Domain Expert for Assessment Lifecycle Management
 Handles creating, updating, listing, and managing TRA assessments
 """
 
+import logging
 from typing import Dict, Any, AsyncIterator
 
 from strands import Agent
@@ -17,6 +18,8 @@ from backend.tools import (
     get_assessment,
     switch_assessment,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AssessmentAgent:

@@ -3,6 +3,7 @@ Question Agent - Domain Expert for Question Flow Management
 Handles TRA questionnaire flow, answer validation, and progress tracking
 """
 
+import logging
 from typing import Dict, Any, AsyncIterator
 
 from strands import Agent
@@ -14,6 +15,8 @@ from backend.tools import (
     question_flow,
     suggest_answer_from_context,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class QuestionAgent:

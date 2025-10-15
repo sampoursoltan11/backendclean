@@ -8,6 +8,7 @@ Provides comprehensive file management with:
 - Automatic agent context detection
 """
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
@@ -16,6 +17,8 @@ import re
 
 from backend.models.tra_models import DocumentMetadata
 from backend.services.dynamodb_service import DynamoDBService
+
+logger = logging.getLogger(__name__)
 
 
 class FileTrackingService:

@@ -11,7 +11,7 @@
  * @returns {string}
  */
 const getEnv = (key, defaultValue = '') => {
-  return import.meta.env[key] || defaultValue;
+  return (import.meta.env && import.meta.env[key]) || defaultValue;
 };
 
 /**

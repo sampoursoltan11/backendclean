@@ -338,8 +338,6 @@ async def upload_document(
                         logger.info(f"Auto-analysis: Could not map {area_name}")
                 
                 if risk_area_ids:
-                    import logging
-                    logger = logging.getLogger(__name__)
                     logger.info(f"[AUTO-ANALYSIS] Risk area IDs to add: {risk_area_ids}")
 
                     # Add all risk areas at once atomically to avoid race conditions

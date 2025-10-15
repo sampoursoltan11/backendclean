@@ -52,7 +52,22 @@ document.addEventListener('alpine:init', () => {
         addMessage() {},
         performSearch() {},
         validateTraId() {},
-        selectAssessment() {}
+        selectAssessment() {},
+        searchAssessments() {},
+        connectWebSocket() {},
+        sendMessageDirect() {},
+        handleFileUpload() {},
+        handleWebSocketMessage() {},
+        removeFile() {},
+        queryDocumentSummaries() {},
+        copyAssessmentToClipboard() {},
+        formatMessage() { return ''; },
+        scrollToBottom() {},
+        showToast() {},
+        detectAgent() { return 'orchestrator'; },
+        initFileUploader() {},
+        initSearch() {},
+        setupGlobalHelpers() {}
     });
 
     console.log('[TRA] Placeholder store registered');

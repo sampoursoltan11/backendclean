@@ -1,8 +1,10 @@
-
+import logging
 
 from strands import tool
 # Risk area management tools (delegate to assessment_tools)
 from backend.tools.assessment_tools import add_risk_area as _add_risk_area, remove_risk_area as _remove_risk_area
+
+logger = logging.getLogger(__name__)
 
 @tool
 async def add_risk_area(

@@ -28,7 +28,7 @@ import * as formatters from './utils/formatters.js';
 import * as constants from './utils/constants.js';
 
 // Import config
-import { BACKEND_CONFIG, debugLog, setDebugMode } from './config/env.js';
+import { BACKEND_CONFIG, debugLog } from './config/env.js';
 
 /**
  * Application initialization
@@ -36,39 +36,11 @@ import { BACKEND_CONFIG, debugLog, setDebugMode } from './config/env.js';
 function initializeApp() {
   debugLog('🚀 Initializing Enterprise TRA Application...');
 
-  // Enable debug mode in development
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    setDebugMode(true);
-    debugLog('Debug mode enabled (development environment)');
-  }
-
-  // Check if Alpine is loaded
-  if (typeof window.Alpine === 'undefined') {
-    console.error('❌ Alpine.js not found! Make sure Alpine.js is loaded before main.js');
-    return;
-  }
-
-  debugLog('✓ Alpine.js detected');
-
-  // Register Alpine stores
-  registerAlpineStores();
-
   // Set up global error handlers
   setupErrorHandlers();
 
   // Initialize services
   initializeServices();
-
-  // Start Alpine (use startAlpine callback if available, otherwise direct start)
-  if (typeof window.startAlpine === 'function') {
-    window.startAlpine();
-    debugLog('✓ Alpine.js started (deferred)');
-  } else if (window.Alpine && !window.Alpine.version) {
-    window.Alpine.start();
-    debugLog('✓ Alpine.js started (direct)');
-  } else {
-    debugLog('✓ Alpine.js already started');
-  }
 
   // Perform health check
   performHealthCheck();
@@ -139,12 +111,11 @@ function setupErrorHandlers() {
 function initializeServices() {
   debugLog('Initializing services...');
 
-  // Storage service initialization
-  try {
-    storageService.init();
-    debugLog('✓ Storage service initialized');
-  } catch (error) {
-    console.error('Failed to initialize storage service:', error);
+  // Storage service is a singleton - already initialized on import
+  if (storageService.available) {
+    debugLog('✓ Storage service ready');
+  } else {
+    console.warn('⚠ Storage service unavailable (localStorage not supported)');
   }
 
   // API service is initialized automatically on import
@@ -225,6 +196,12 @@ export {
   // Config
   BACKEND_CONFIG
 };
+
+// Register store with Alpine BEFORE it initializes
+document.addEventListener('alpine:init', () => {
+  debugLog('Alpine:init event - registering stores');
+  registerAlpineStores();
+});
 
 // Initialize the application when DOM is ready
 if (document.readyState === 'loading') {
