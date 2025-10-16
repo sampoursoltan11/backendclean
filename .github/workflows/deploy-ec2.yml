@@ -1,11 +1,7 @@
 name: Deploy to EC2
 
 on:
-  push:
-    branches:
-      - main
-      - master
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:  # Only manual trigger - no automatic deployment on push
 
 jobs:
   deploy:
@@ -85,8 +81,8 @@ jobs:
         sudo tar -xzf /tmp/tra-app.tar.gz -C /opt/tra-app/
         rm /tmp/tra-app.tar.gz
 
-        # Install Python dependencies
-        sudo pip3.11 install -r /opt/tra-app/backend/requirements.txt
+        # Skip dependency installation - already installed on EC2
+        # Dependencies were manually installed and tested to avoid pip conflicts
 
         # Create logs directory
         sudo mkdir -p /opt/tra-app/logs
