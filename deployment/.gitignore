@@ -1,0 +1,35 @@
+# Build directory
+build/
+
+# Environment files
+config/.env
+.env
+
+# Elastic Beanstalk
+.elasticbeanstalk/
+*.zip
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Node
+node_modules/
