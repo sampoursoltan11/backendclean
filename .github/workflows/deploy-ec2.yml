@@ -41,6 +41,12 @@ jobs:
         mkdir -p /tmp/deploy/backend/frontend/build
         cp -r frontend/dist/* /tmp/deploy/backend/frontend/build/
 
+        # Add cache-busting version to main.js import
+        echo "Adding cache-busting version parameter..."
+        VERSION=$(date +%Y%m%d%H%M%S)
+        sed -i "s|/js/main.js\"|/js/main.js?v=$VERSION\"|g" /tmp/deploy/backend/frontend/build/enterprise_tra_home_clean.html
+        echo "Cache-busting version added: v=$VERSION"
+
         # Create tarball
         cd /tmp
         tar -czf tra-app.tar.gz -C deploy .

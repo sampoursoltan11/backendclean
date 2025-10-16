@@ -443,7 +443,8 @@ export function createChatStore() {
 
       try {
         const backendHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
-        const url = `http://${backendHost}/api/assessments/${traId}/documents`;
+        const protocol = window.location.hostname === 'localhost' ? 'http' : window.location.protocol.replace(':', '');
+        const url = `${protocol}://${backendHost}/api/assessments/${traId}/documents`;
 
         debugLog(`[DOC QUERY] Making request to: ${url}`);
 
@@ -556,7 +557,8 @@ export function createChatStore() {
 
       try {
         const backendHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
-        const url = `http://${backendHost}/api/assessments/${this.currentAssessmentId}/progress`;
+        const protocol = window.location.hostname === 'localhost' ? 'http' : window.location.protocol.replace(':', '');
+        const url = `${protocol}://${backendHost}/api/assessments/${this.currentAssessmentId}/progress`;
 
         debugLog('[PROGRESS] Fetching progress breakdown from:', url);
 

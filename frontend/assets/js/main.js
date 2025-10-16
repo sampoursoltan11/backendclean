@@ -71,35 +71,11 @@ function setupErrorHandlers() {
   // Handle uncaught errors
   window.addEventListener('error', (event) => {
     console.error('Uncaught error:', event.error);
-
-    // Log to backend if available
-    if (apiService) {
-      apiService.post('/api/logs/error', {
-        message: event.error?.message || 'Unknown error',
-        stack: event.error?.stack,
-        url: window.location.href,
-        timestamp: new Date().toISOString()
-      }).catch(err => {
-        debugLog('Failed to log error to backend:', err);
-      });
-    }
   });
 
   // Handle unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
-
-    // Log to backend if available
-    if (apiService) {
-      apiService.post('/api/logs/error', {
-        message: event.reason?.message || 'Unhandled promise rejection',
-        stack: event.reason?.stack,
-        url: window.location.href,
-        timestamp: new Date().toISOString()
-      }).catch(err => {
-        debugLog('Failed to log error to backend:', err);
-      });
-    }
   });
 
   debugLog('✓ Error handlers set up');

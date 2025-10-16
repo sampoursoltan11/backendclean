@@ -231,6 +231,13 @@ cp -r "$BACKEND_DIR"/* "$DEPLOY_DIR/backend/"
 mkdir -p "$DEPLOY_DIR/backend/frontend/build"
 cp -r "$FRONTEND_DIR/dist"/* "$DEPLOY_DIR/backend/frontend/build/"
 
+# Add cache-busting version to main.js import
+log_info "Adding cache-busting version parameter..."
+VERSION=$(date +%Y%m%d%H%M%S)
+sed -i.bak "s|/js/main.js\"|/js/main.js?v=$VERSION\"|g" "$DEPLOY_DIR/backend/frontend/build/enterprise_tra_home_clean.html"
+rm -f "$DEPLOY_DIR/backend/frontend/build/enterprise_tra_home_clean.html.bak"
+log_success "Cache-busting version added: v=$VERSION"
+
 # Create deployment archive
 cd /tmp
 tar -czf tra-app.tar.gz -C "$DEPLOY_DIR" .
