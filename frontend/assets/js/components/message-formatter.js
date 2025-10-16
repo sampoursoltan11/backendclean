@@ -512,8 +512,8 @@ export class MessageFormatter {
       </span>
       <div>${contentStyled}</div>
 
-      <div style="margin-top: 16px; background: #f9fafb; padding: 16px; border-radius: 8px; border: 2px solid #e5e7eb;">
-        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 0.9rem;">
+      <div style="margin-top: 10px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb;">
+        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9rem;">
           <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
           </svg>
@@ -524,12 +524,12 @@ export class MessageFormatter {
           class="text-input-area"
           placeholder="Type your detailed answer here..."
           rows="1"
-          style="width: 100%; min-height: 44px; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; resize: vertical; font-family: inherit;"
+          style="width: 100%; min-height: 44px; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; resize: vertical; font-family: inherit;"
           onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
           onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
           onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.submitFreeText('${textAreaId}'); }"
         ></textarea>
-        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+        <div style="margin-top: 8px; display: flex; gap: 8px; justify-content: flex-end;">
           ${aiSuggestedAnswer ? `<button onclick="document.getElementById('${textAreaId}').value='${aiSuggestedAnswer.replace(/'/g, "\\'")}'"
             style="padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500;"
             onmouseover="this.style.background='#e5e7eb'"

@@ -393,26 +393,26 @@
 
                         <!-- User Messages -->
                         <template x-if="message.role === 'user'">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <div class="message-bubble user-message max-w-2xl mx-auto">
-                                    <div class="mb-2">
+                                    <div class="mb-1.5">
                                         <span class="agent-badge" style="background: linear-gradient(135deg, #374151 0%, #1f2937 100%);">User</span>
                                     </div>
                                     <div class="text-sm leading-snug font-medium" x-html="formatMessage(message.content, 'user')"></div>
-                                    <div class="text-xs opacity-70 mt-1.5" x-text="new Date(message.timestamp).toLocaleTimeString()"></div>
+                                    <div class="text-xs opacity-70 mt-1" x-text="new Date(message.timestamp).toLocaleTimeString()"></div>
                                 </div>
                             </div>
                         </template>
 
                         <!-- Bot Messages -->
                         <template x-if="message.role === 'assistant'">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <div class="message-bubble bot-message max-w-2xl mx-auto relative">
-                                    <div x-show="message.metadata?.agent" class="mb-2">
+                                    <div x-show="message.metadata?.agent" class="mb-1.5">
                                         <span class="agent-badge" x-text="(message.metadata?.agent || 'AI') + ' Agent'"></span>
                                     </div>
                                     <div class="text-sm leading-snug" x-html="formatMessage(message.content, 'assistant')"></div>
-                                    <div class="text-xs text-gray-500 mt-2" x-text="new Date(message.timestamp).toLocaleTimeString()"></div>
+                                    <div class="text-xs text-gray-500 mt-1" x-text="new Date(message.timestamp).toLocaleTimeString()"></div>
                                 </div>
                             </div>
                         </template>

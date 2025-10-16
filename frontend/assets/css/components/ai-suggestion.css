@@ -8,8 +8,8 @@
   background: var(--gradient-ai-suggestion);
   border: 3px solid var(--color-info);
   border-radius: 16px;
-  padding: 18px;
-  margin: 0 0 18px 0;
+  padding: 12px;
+  margin: 0 0 12px 0;
   box-shadow: 0 8px 16px -2px rgba(14, 165, 233, 0.2), 0 0 0 1px rgba(14, 165, 233, 0.1);
   position: relative;
 }
@@ -53,20 +53,20 @@
 .ai-suggestion-content {
   color: #0c4a6e;
   font-size: 0.9rem;
-  line-height: var(--leading-relaxed);
-  margin: var(--spacing-sm) 0;
+  line-height: var(--leading-snug);
+  margin: 6px 0;
 }
 
 /* AI Suggestion Answer */
 .ai-suggestion-answer {
   background-color: white;
-  padding: var(--spacing-md);
+  padding: 10px;
   border-radius: var(--radius-md);
   border-left: 3px solid var(--color-info);
-  margin: var(--spacing-sm) 0;
+  margin: 6px 0;
   font-size: 1.05rem;
   font-weight: 500;
-  line-height: var(--leading-relaxed);
+  line-height: var(--leading-snug);
   color: var(--color-gray-900);
 }
 
