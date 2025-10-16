@@ -100,8 +100,8 @@ jobs:
         echo "Waiting for application to start..."
         sleep 20
 
-        # Test health endpoint
-        HEALTH_CHECK=$(curl -s http://3.25.202.107/api/health)
+        # Test health endpoint (use HTTPS)
+        HEALTH_CHECK=$(curl -s https://bhp-tra-poc.duckdns.org/api/health)
         echo "Health check response: $HEALTH_CHECK"
 
         if echo "$HEALTH_CHECK" | grep -q "healthy"; then
