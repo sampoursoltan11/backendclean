@@ -10,19 +10,25 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from decimal import Decimal
 from websockets.exceptions import ConnectionClosedError
 
 from backend.core.config import get_settings
-from backend.logging_config import setup_logging
 from backend.utils.common import serialize_datetime
 
-# Set up logging to file + console
-log_file = setup_logging('logs/tra_system.log')
-print(f"📝 All logs are being saved to: {log_file}")
-print(f"📝 You can view the log file with: tail -f {log_file}")
+# Set up logging (try file logging, fall back to console only)
+try:
+    from backend.logging_config import setup_logging
+    log_file = setup_logging('logs/tra_system.log')
+    print(f"📝 All logs are being saved to: {log_file}")
+except Exception as e:
+    # If file logging fails (e.g., on AWS EB), just use console logging
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    print(f"📝 Using console logging only (file logging unavailable): {e}")
 
 from backend.variants.enterprise import create_enterprise_agent
 from backend.services.s3_service import S3Service
@@ -36,6 +42,40 @@ app = FastAPI(title="TRA System API", version="2.0.0")
 
 # Alias for backward compatibility
 _serialize_datetimes = serialize_datetime
+
+# Health check endpoint for AWS Elastic Beanstalk and monitoring
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for load balancers and monitoring"""
+    return {
+        "status": "healthy",
+        "service": "TRA System API",
+        "version": "2.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
+
+# Mount static files for frontend assets (CSS, JS, etc.)
+import os
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "build")
+if os.path.exists(frontend_path):
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+# Serve frontend HTML at root path
+@app.get("/")
+async def root():
+    """Serve the frontend application"""
+    frontend_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "build", "enterprise_tra_home_clean.html")
+    if os.path.exists(frontend_file):
+        return FileResponse(frontend_file)
+    else:
+        return {
+            "message": "BHP Technology & Application Services Assessment API",
+            "status": "online",
+            "version": "2.0.0",
+            "note": "Frontend not found - API only mode"
+        }
 
 @app.get("/api/documents/ingestion_status/{ingestion_job_id}")
 async def get_ingestion_status(ingestion_job_id: str):
@@ -95,15 +135,6 @@ def get_file_tracker() -> FileTrackingService:
     return _file_tracker
 
 
-@app.get("/api/health")
-async def health_check():
-    """Basic health check endpoint."""
-    return JSONResponse({
-        "ok": True,
-        "status": "running",
-        "message": "TRA System is operational",
-        "version": "2.0.0 - Strands 1.x Native"
-    })
 
 
 

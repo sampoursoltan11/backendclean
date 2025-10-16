@@ -1,506 +1,475 @@
 #!/bin/bash
 
 ##############################################################################
-# AWS Elastic Beanstalk Deployment Script with DevOps Best Practices
-# This script deploys the full-stack application (React + Flask) to AWS EB
-# with comprehensive testing, health checks, and rollback capabilities
+# Complete EC2 Deployment Script for BHP TRA Application
+# Automatically creates IAM roles, security groups, and deploys full app
 ##############################################################################
 
-set -e  # Exit on any error
-
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+set -e
 
 # Configuration
-APP_NAME="${EB_APP_NAME:-bhp-assessment-app}"
-ENV_NAME="${EB_ENV_NAME:-bhp-assessment-env}"
-REGION="${AWS_REGION:-us-east-1}"
-PLATFORM="python-3.11"
-MAX_WAIT_TIME=600  # 10 minutes
-HEALTH_CHECK_RETRIES=10
-HEALTH_CHECK_INTERVAL=30
+REGION="ap-southeast-2"
+INSTANCE_TYPE="t3.medium"
+AMI_ID="ami-075924b436aa32cd4"  # Amazon Linux 2023 in ap-southeast-2
+KEY_NAME="bhp-tra-key"
+INSTANCE_NAME="bhp-tra-app"
+IAM_ROLE_NAME="BHP-TRA-EC2-Role"
+IAM_POLICY_NAME="BHP-TRA-Full-Access-Policy"
+SG_NAME="bhp-tra-sg"
+
+# AWS Resources (from config.py)
+DYNAMODB_TABLE="tra-system"
+S3_BUCKET="bhp-tra-agent-docs-poc"
+
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
 # Directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
-DEPLOYMENT_DIR="$ROOT_DIR/deployment"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
-BUILD_DIR="$DEPLOYMENT_DIR/build"
+
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+echo -e "${GREEN}==>${NC} ${BLUE}BHP TRA Application - EC2 Deployment${NC}"
+echo ""
+echo "Region: $REGION"
+echo "Instance Type: $INSTANCE_TYPE"
+echo "DynamoDB Table: $DYNAMODB_TABLE"
+echo "S3 Bucket: $S3_BUCKET"
+echo ""
 
 ##############################################################################
-# Logging Functions
+# Step 1: Create IAM Policy with full permissions
 ##############################################################################
 
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+log_info "Creating IAM policy..."
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+cat > /tmp/tra-iam-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:*"
+      ],
+      "Resource": "*"
+    }
+  ]
 }
+EOF
 
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+# Check if policy exists
+POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='$IAM_POLICY_NAME'].Arn" --output text --region $REGION 2>/dev/null || echo "")
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_step() {
-    echo -e "\n${GREEN}==>${NC} ${BLUE}$1${NC}\n"
-}
+if [ -z "$POLICY_ARN" ]; then
+    log_info "Creating new IAM policy..."
+    POLICY_ARN=$(aws iam create-policy \
+        --policy-name "$IAM_POLICY_NAME" \
+        --policy-document file:///tmp/tra-iam-policy.json \
+        --region $REGION \
+        --query 'Policy.Arn' \
+        --output text)
+    log_success "IAM policy created: $POLICY_ARN"
+else
+    log_success "IAM policy already exists: $POLICY_ARN"
+fi
 
 ##############################################################################
-# Pre-flight Checks
+# Step 2: Create IAM Role for EC2
 ##############################################################################
 
-check_prerequisites() {
-    log_step "Running pre-flight checks..."
+log_info "Creating IAM role for EC2..."
 
-    # Check if AWS CLI is installed
-    if ! command -v aws &> /dev/null; then
-        log_error "AWS CLI is not installed. Please install it first."
-        echo "Visit: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-        exit 1
-    fi
-    log_success "AWS CLI is installed"
-
-    # Check AWS credentials
-    if ! aws sts get-caller-identity &> /dev/null; then
-        log_error "AWS credentials are not configured. Run 'aws configure'"
-        exit 1
-    fi
-    log_success "AWS credentials are configured"
-
-    # Check if EB CLI is installed
-    if ! command -v eb &> /dev/null; then
-        log_warning "EB CLI is not installed. Installing..."
-        pip install awsebcli --upgrade --user
-    fi
-    log_success "EB CLI is available"
-
-    # Check if Node.js is installed
-    if ! command -v node &> /dev/null; then
-        log_error "Node.js is not installed. Please install it first."
-        exit 1
-    fi
-    log_success "Node.js is installed ($(node --version))"
-
-    # Check if Python is installed
-    if ! command -v python3 &> /dev/null; then
-        log_error "Python 3 is not installed. Please install it first."
-        exit 1
-    fi
-    log_success "Python is installed ($(python3 --version))"
-
-    # Check required directories exist
-    if [ ! -d "$BACKEND_DIR" ]; then
-        log_error "Backend directory not found: $BACKEND_DIR"
-        exit 1
-    fi
-
-    if [ ! -d "$FRONTEND_DIR" ]; then
-        log_error "Frontend directory not found: $FRONTEND_DIR"
-        exit 1
-    fi
-
-    log_success "All prerequisites met!"
+cat > /tmp/tra-trust-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
 }
+EOF
+
+# Check if role exists
+if aws iam get-role --role-name "$IAM_ROLE_NAME" --region $REGION &>/dev/null; then
+    log_success "IAM role already exists: $IAM_ROLE_NAME"
+else
+    log_info "Creating new IAM role..."
+    aws iam create-role \
+        --role-name "$IAM_ROLE_NAME" \
+        --assume-role-policy-document file:///tmp/tra-trust-policy.json \
+        --region $REGION
+    log_success "IAM role created: $IAM_ROLE_NAME"
+fi
+
+# Attach policy to role
+aws iam attach-role-policy \
+    --role-name "$IAM_ROLE_NAME" \
+    --policy-arn "$POLICY_ARN" \
+    --region $REGION 2>/dev/null || log_warning "Policy already attached"
+
+# Create instance profile if it doesn't exist
+if aws iam get-instance-profile --instance-profile-name "$IAM_ROLE_NAME" --region $REGION &>/dev/null; then
+    log_success "Instance profile already exists"
+else
+    log_info "Creating instance profile..."
+    aws iam create-instance-profile --instance-profile-name "$IAM_ROLE_NAME" --region $REGION
+    aws iam add-role-to-instance-profile --instance-profile-name "$IAM_ROLE_NAME" --role-name "$IAM_ROLE_NAME" --region $REGION
+    log_success "Instance profile created"
+    # Wait for instance profile to be ready
+    sleep 10
+fi
 
 ##############################################################################
-# Build Functions
+# Step 3: Create Security Group
 ##############################################################################
 
-build_frontend() {
-    log_step "Building React frontend..."
+log_info "Setting up security group..."
 
-    cd "$FRONTEND_DIR"
+VPC_ID=$(aws ec2 describe-vpcs --region "$REGION" --filters "Name=is-default,Values=true" --query 'Vpcs[0].VpcId' --output text)
 
-    # Install dependencies
-    log_info "Installing frontend dependencies..."
-    npm ci --production=false
+# Check if security group exists
+SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=$SG_NAME" --region "$REGION" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
 
-    # Run tests
-    log_info "Running frontend tests..."
-    CI=true npm test -- --passWithNoTests || log_warning "Frontend tests failed, continuing..."
+if [ -z "$SG_ID" ] || [ "$SG_ID" == "None" ]; then
+    log_info "Creating security group..."
+    SG_ID=$(aws ec2 create-security-group \
+        --group-name "$SG_NAME" \
+        --description "Security group for BHP TRA application" \
+        --vpc-id "$VPC_ID" \
+        --region "$REGION" \
+        --query 'GroupId' \
+        --output text)
 
-    # Build production bundle
-    log_info "Creating production build..."
+    # Add rules
+    aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 22 --cidr 0.0.0.0/0 --region "$REGION"
+    aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0 --region "$REGION"
+    aws ec2 authorize-security-group-ingress --group-id "$SG_ID" --protocol tcp --port 8000 --cidr 0.0.0.0/0 --region "$REGION"
+
+    log_success "Security group created: $SG_ID"
+else
+    log_success "Security group exists: $SG_ID"
+fi
+
+##############################################################################
+# Step 4: Create SSH Key Pair
+##############################################################################
+
+log_info "Checking SSH key pair..."
+if aws ec2 describe-key-pairs --key-names "$KEY_NAME" --region "$REGION" &>/dev/null; then
+    log_success "Key pair '$KEY_NAME' exists"
+else
+    log_info "Creating new key pair..."
+    aws ec2 create-key-pair \
+        --key-name "$KEY_NAME" \
+        --region "$REGION" \
+        --query 'KeyMaterial' \
+        --output text > ~/.ssh/${KEY_NAME}.pem
+    chmod 400 ~/.ssh/${KEY_NAME}.pem
+    log_success "Key pair created and saved to ~/.ssh/${KEY_NAME}.pem"
+fi
+
+##############################################################################
+# Step 5: Build Frontend
+##############################################################################
+
+log_info "Preparing frontend..."
+cd "$FRONTEND_DIR"
+if [ -d "dist" ] && [ -f "dist/enterprise_tra_home_clean.html" ]; then
+    log_success "Using existing frontend build"
+else
+    log_info "Building frontend..."
+    if [ ! -d "node_modules" ]; then
+        log_info "Installing frontend dependencies..."
+        npm install
+    fi
     npm run build
-
-    if [ ! -d "$FRONTEND_DIR/build" ]; then
-        log_error "Frontend build failed - build directory not created"
-        exit 1
-    fi
-
     log_success "Frontend built successfully"
-    cd "$ROOT_DIR"
+fi
+
+##############################################################################
+# Step 6: Create Deployment Package
+##############################################################################
+
+log_info "Creating deployment package..."
+DEPLOY_DIR="/tmp/tra-deploy-$(date +%s)"
+mkdir -p "$DEPLOY_DIR/backend"
+
+# Copy backend AS a package
+cp -r "$BACKEND_DIR"/* "$DEPLOY_DIR/backend/"
+
+# Copy frontend build into backend/frontend
+mkdir -p "$DEPLOY_DIR/backend/frontend/build"
+cp -r "$FRONTEND_DIR/dist"/* "$DEPLOY_DIR/backend/frontend/build/"
+
+# Create deployment archive
+cd /tmp
+tar -czf tra-app.tar.gz -C "$DEPLOY_DIR" .
+
+# Upload to S3
+log_info "Uploading deployment package to S3..."
+aws s3 cp /tmp/tra-app.tar.gz s3://$S3_BUCKET/deployments/tra-app-latest.tar.gz --region $REGION
+log_success "Deployment package uploaded"
+
+##############################################################################
+# Step 7: Create User Data Script
+##############################################################################
+
+log_info "Creating user data script..."
+cat > /tmp/ec2-userdata.sh << USERDATA
+#!/bin/bash
+set -e
+
+echo "Starting TRA application setup..."
+
+# Update system
+yum update -y
+
+# Install Python 3.11
+yum install -y python3.11 python3.11-pip git nginx
+
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip -q awscliv2.zip
+./aws/install
+rm -rf aws awscliv2.zip
+
+# Create application directory
+mkdir -p /opt/tra-app
+cd /opt/tra-app
+
+# Download and extract application
+aws s3 cp s3://$S3_BUCKET/deployments/tra-app-latest.tar.gz /tmp/tra-app.tar.gz --region $REGION
+tar -xzf /tmp/tra-app.tar.gz -C /opt/tra-app/
+rm /tmp/tra-app.tar.gz
+
+# Install Python dependencies
+pip3.11 install -r /opt/tra-app/backend/requirements.txt
+
+# Create logs directory
+mkdir -p /opt/tra-app/logs
+
+# Configure nginx
+cat > /etc/nginx/conf.d/tra-app.conf << 'NGINXCONF'
+server {
+    listen 80;
+    server_name _;
+    client_max_body_size 20M;
+
+    # Frontend static files
+    root /opt/tra-app/backend/frontend/build;
+    index enterprise_tra_home_clean.html;
+
+    # Serve frontend - simpler version without try_files loop
+    location = / {
+        try_files /enterprise_tra_home_clean.html =404;
+    }
+
+    # Serve static files
+    location / {
+        try_files \$uri =404;
+    }
+
+    # Proxy API requests to backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+
+    # Proxy WebSocket connections
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 86400;
+    }
+
+    # Static assets with caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 }
+NGINXCONF
 
-prepare_backend() {
-    log_step "Preparing Flask backend..."
+# Start nginx
+systemctl enable nginx
+systemctl start nginx
 
-    cd "$BACKEND_DIR"
+# Create systemd service
+cat > /etc/systemd/system/tra-app.service << 'SERVICECONF'
+[Unit]
+Description=BHP TRA Application
+After=network.target
 
-    # Create requirements.txt if it doesn't exist
-    if [ ! -f "requirements.txt" ]; then
-        log_warning "requirements.txt not found, creating from environment..."
-        pip freeze > requirements.txt
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tra-app
+Environment="AWS_REGION=$REGION"
+Environment="AWS_DEFAULT_REGION=$REGION"
+Environment="DYNAMODB_TABLE_NAME=$DYNAMODB_TABLE"
+Environment="S3_BUCKET_NAME=$S3_BUCKET"
+Environment="BEDROCK_REGION=$REGION"
+Environment="ENVIRONMENT=production"
+Environment="PYTHONPATH=/opt/tra-app"
+ExecStart=/usr/bin/python3.11 -m uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+SERVICECONF
+
+# Start the application
+systemctl daemon-reload
+systemctl enable tra-app.service
+systemctl start tra-app.service
+
+echo "TRA application setup complete!"
+USERDATA
+
+##############################################################################
+# Step 8: Launch EC2 Instance
+##############################################################################
+
+log_info "Launching EC2 instance..."
+
+# Check if instance already exists
+EXISTING_INSTANCE=$(aws ec2 describe-instances \
+    --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --region "$REGION" \
+    --query 'Reservations[0].Instances[0].InstanceId' \
+    --output text 2>/dev/null || echo "")
+
+if [ -n "$EXISTING_INSTANCE" ] && [ "$EXISTING_INSTANCE" != "None" ]; then
+    log_warning "Instance already exists: $EXISTING_INSTANCE"
+    log_info "Stopping existing instance..."
+    aws ec2 terminate-instances --instance-ids "$EXISTING_INSTANCE" --region "$REGION"
+    aws ec2 wait instance-terminated --instance-ids "$EXISTING_INSTANCE" --region "$REGION"
+    log_success "Old instance terminated"
+fi
+
+INSTANCE_ID=$(aws ec2 run-instances \
+    --image-id "$AMI_ID" \
+    --instance-type "$INSTANCE_TYPE" \
+    --key-name "$KEY_NAME" \
+    --security-group-ids "$SG_ID" \
+    --iam-instance-profile Name="$IAM_ROLE_NAME" \
+    --user-data file:///tmp/ec2-userdata.sh \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME}]" \
+    --region "$REGION" \
+    --query 'Instances[0].InstanceId' \
+    --output text)
+
+log_success "Instance launched: $INSTANCE_ID"
+
+# Wait for instance to be running
+log_info "Waiting for instance to be running..."
+aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
+log_success "Instance is running"
+
+# Get public IP
+PUBLIC_IP=$(aws ec2 describe-instances \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --query 'Reservations[0].Instances[0].PublicIpAddress' \
+    --output text)
+
+PUBLIC_DNS=$(aws ec2 describe-instances \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --query 'Reservations[0].Instances[0].PublicDnsName' \
+    --output text)
+
+log_success "Instance details retrieved"
+
+##############################################################################
+# Step 9: Wait for Application to Start
+##############################################################################
+
+log_info "Waiting for application to initialize (this may take 3-5 minutes)..."
+sleep 180
+
+# Test health endpoint
+log_info "Testing application health..."
+for i in {1..10}; do
+    if curl -s -f "http://${PUBLIC_IP}/api/health" &>/dev/null; then
+        log_success "Application is healthy!"
+        break
     fi
-
-    log_success "Backend prepared"
-    cd "$ROOT_DIR"
-}
-
-create_deployment_package() {
-    log_step "Creating deployment package..."
-
-    # Clean previous build
-    rm -rf "$BUILD_DIR"
-    mkdir -p "$BUILD_DIR"
-
-    # Copy backend files
-    log_info "Copying backend files..."
-    cp -r "$BACKEND_DIR"/* "$BUILD_DIR/"
-
-    # Copy frontend build
-    log_info "Copying frontend build..."
-    mkdir -p "$BUILD_DIR/frontend/build"
-    cp -r "$FRONTEND_DIR/build"/* "$BUILD_DIR/frontend/build/"
-
-    # Copy EB extensions
-    log_info "Copying Elastic Beanstalk configurations..."
-    cp -r "$DEPLOYMENT_DIR/.ebextensions" "$BUILD_DIR/"
-
-    # Create .ebignore file
-    cat > "$BUILD_DIR/.ebignore" << EOF
-*.pyc
-__pycache__/
-.env
-.venv/
-venv/
-.git/
-.gitignore
-*.log
-.DS_Store
-node_modules/
-*.test.js
-EOF
-
-    log_success "Deployment package created at: $BUILD_DIR"
-}
-
-##############################################################################
-# AWS Elastic Beanstalk Functions
-##############################################################################
-
-initialize_eb() {
-    log_step "Initializing Elastic Beanstalk..."
-
-    cd "$BUILD_DIR"
-
-    # Check if EB is already initialized
-    if [ ! -d ".elasticbeanstalk" ]; then
-        log_info "Initializing new EB application..."
-        eb init "$APP_NAME" \
-            --platform "$PLATFORM" \
-            --region "$REGION" \
-            --tags "Project=BHP-Assessment,Environment=Production,ManagedBy=Script"
-        log_success "EB application initialized"
+    if [ $i -eq 10 ]; then
+        log_warning "Application health check failed, but instance is running"
+        log_info "Check logs with: ssh -i ~/.ssh/${KEY_NAME}.pem ec2-user@${PUBLIC_IP} 'sudo journalctl -u tra-app -n 50'"
     else
-        log_info "EB already initialized, updating configuration..."
+        log_info "Attempt $i/10 failed, retrying in 15s..."
+        sleep 15
     fi
-
-    cd "$ROOT_DIR"
-}
-
-create_or_update_environment() {
-    log_step "Creating or updating EB environment..."
-
-    cd "$BUILD_DIR"
-
-    # Check if environment exists
-    ENV_STATUS=$(eb list | grep "$ENV_NAME" || echo "not_found")
-
-    if [[ "$ENV_STATUS" == "not_found" ]]; then
-        log_info "Creating new environment: $ENV_NAME"
-        eb create "$ENV_NAME" \
-            --instance-type t3.small \
-            --envvars FLASK_ENV=production \
-            --enable-spot \
-            --timeout 20
-    else
-        log_info "Environment exists, deploying update..."
-        eb deploy "$ENV_NAME" --timeout 20
-    fi
-
-    cd "$ROOT_DIR"
-}
-
-wait_for_environment_ready() {
-    log_step "Waiting for environment to be ready..."
-
-    cd "$BUILD_DIR"
-
-    local elapsed=0
-    local status=""
-
-    while [ $elapsed -lt $MAX_WAIT_TIME ]; do
-        status=$(eb status "$ENV_NAME" | grep "Status:" | awk '{print $2}' || echo "Unknown")
-
-        log_info "Environment status: $status (${elapsed}s elapsed)"
-
-        if [[ "$status" == "Ready" ]]; then
-            log_success "Environment is ready!"
-            cd "$ROOT_DIR"
-            return 0
-        elif [[ "$status" == "Terminated" ]] || [[ "$status" == "Terminating" ]]; then
-            log_error "Environment is terminated or terminating"
-            cd "$ROOT_DIR"
-            return 1
-        fi
-
-        sleep 10
-        elapsed=$((elapsed + 10))
-    done
-
-    log_error "Environment did not become ready within ${MAX_WAIT_TIME}s"
-    cd "$ROOT_DIR"
-    return 1
-}
+done
 
 ##############################################################################
-# Health Check Functions
+# Deployment Complete
 ##############################################################################
 
-get_environment_url() {
-    cd "$BUILD_DIR"
-    local url=$(eb status "$ENV_NAME" | grep "CNAME:" | awk '{print $2}')
-    cd "$ROOT_DIR"
-    echo "https://$url"
-}
-
-run_health_checks() {
-    log_step "Running health checks..."
-
-    local url=$(get_environment_url)
-    log_info "Application URL: $url"
-
-    local attempt=1
-    local success=0
-
-    while [ $attempt -le $HEALTH_CHECK_RETRIES ]; do
-        log_info "Health check attempt $attempt/$HEALTH_CHECK_RETRIES..."
-
-        # Check backend health
-        local backend_status=$(curl -s -o /dev/null -w "%{http_code}" "$url/api/health" || echo "000")
-
-        if [ "$backend_status" == "200" ]; then
-            log_success "Backend health check passed (HTTP $backend_status)"
-            success=$((success + 1))
-        else
-            log_warning "Backend health check failed (HTTP $backend_status)"
-        fi
-
-        # Check frontend
-        local frontend_status=$(curl -s -o /dev/null -w "%{http_code}" "$url/" || echo "000")
-
-        if [ "$frontend_status" == "200" ]; then
-            log_success "Frontend health check passed (HTTP $frontend_status)"
-            success=$((success + 1))
-        else
-            log_warning "Frontend health check failed (HTTP $frontend_status)"
-        fi
-
-        # If both checks pass, we're good
-        if [ $success -ge 2 ]; then
-            log_success "All health checks passed!"
-            return 0
-        fi
-
-        if [ $attempt -lt $HEALTH_CHECK_RETRIES ]; then
-            log_info "Waiting ${HEALTH_CHECK_INTERVAL}s before retry..."
-            sleep $HEALTH_CHECK_INTERVAL
-        fi
-
-        attempt=$((attempt + 1))
-        success=0
-    done
-
-    log_error "Health checks failed after $HEALTH_CHECK_RETRIES attempts"
-    return 1
-}
-
-run_smoke_tests() {
-    log_step "Running smoke tests..."
-
-    local url=$(get_environment_url)
-
-    # Test 1: Check if API endpoints are accessible
-    log_info "Test 1: API accessibility..."
-    if curl -s "$url/api/health" | grep -q "healthy"; then
-        log_success "✓ API is accessible"
-    else
-        log_error "✗ API is not accessible"
-        return 1
-    fi
-
-    # Test 2: Check security headers
-    log_info "Test 2: Security headers..."
-    local headers=$(curl -sI "$url/")
-
-    if echo "$headers" | grep -q "X-Frame-Options"; then
-        log_success "✓ Security headers are set"
-    else
-        log_warning "✗ Some security headers might be missing"
-    fi
-
-    # Test 3: Check HTTPS redirect
-    log_info "Test 3: HTTPS enforcement..."
-    local http_url="${url/https/http}"
-    local redirect_status=$(curl -s -o /dev/null -w "%{http_code}" -L "$http_url")
-
-    if [ "$redirect_status" == "200" ]; then
-        log_success "✓ HTTPS is working"
-    else
-        log_warning "✗ HTTPS might not be fully configured"
-    fi
-
-    log_success "Smoke tests completed!"
-}
-
-##############################################################################
-# Rollback Function
-##############################################################################
-
-rollback_deployment() {
-    log_warning "Rolling back deployment..."
-
-    cd "$BUILD_DIR"
-
-    # Get previous version
-    local prev_version=$(eb history | head -n 2 | tail -n 1 | awk '{print $2}')
-
-    if [ -n "$prev_version" ]; then
-        log_info "Rolling back to version: $prev_version"
-        eb deploy --version "$prev_version"
-        log_success "Rollback completed"
-    else
-        log_error "No previous version found for rollback"
-    fi
-
-    cd "$ROOT_DIR"
-}
-
-##############################################################################
-# Display Information
-##############################################################################
-
-display_deployment_info() {
-    log_step "Deployment Information"
-
-    local url=$(get_environment_url)
-
-    cat << EOF
-
-${GREEN}═══════════════════════════════════════════════════════════════${NC}
-${GREEN}              DEPLOYMENT SUCCESSFUL!${NC}
-${GREEN}═══════════════════════════════════════════════════════════════${NC}
-
-${BLUE}Application URL:${NC}
-  $url
-
-${BLUE}Useful Commands:${NC}
-  View logs:      eb logs "$ENV_NAME" --all
-  SSH to server:  eb ssh "$ENV_NAME"
-  Check status:   eb status "$ENV_NAME"
-  Open in browser: eb open "$ENV_NAME"
-  Scale up:       eb scale 2 "$ENV_NAME"
-  Terminate:      eb terminate "$ENV_NAME"
-
-${BLUE}Monitoring:${NC}
-  AWS Console: https://console.aws.amazon.com/elasticbeanstalk/home?region=$REGION#/environment/dashboard?applicationName=$APP_NAME&environmentId=$ENV_NAME
-
-${BLUE}Security:${NC}
-  ✓ HTTPS Enabled
-  ✓ Security Headers Configured
-  ✓ Auto-scaling Enabled
-  ✓ Enhanced Health Monitoring
-
-${BLUE}Next Steps:${NC}
-  1. Test the application: $url
-  2. Configure custom domain (optional)
-  3. Set up CloudWatch alarms
-  4. Configure backup strategy
-
-${GREEN}═══════════════════════════════════════════════════════════════${NC}
-
-EOF
-}
-
-##############################################################################
-# Main Deployment Flow
-##############################################################################
-
-main() {
-    log_step "Starting AWS Elastic Beanstalk Deployment"
-    echo "Application: $APP_NAME"
-    echo "Environment: $ENV_NAME"
-    echo "Region: $REGION"
-    echo ""
-
-    # Pre-flight checks
-    check_prerequisites
-
-    # Build
-    build_frontend
-    prepare_backend
-    create_deployment_package
-
-    # Deploy
-    initialize_eb
-    create_or_update_environment
-
-    # Wait and verify
-    if wait_for_environment_ready; then
-        if run_health_checks; then
-            run_smoke_tests
-            display_deployment_info
-            log_success "Deployment completed successfully!"
-            exit 0
-        else
-            log_error "Health checks failed!"
-            read -p "Do you want to rollback? (y/n) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                rollback_deployment
-            fi
-            exit 1
-        fi
-    else
-        log_error "Environment failed to become ready"
-        exit 1
-    fi
-}
-
-##############################################################################
-# Cleanup on Exit
-##############################################################################
-
-cleanup() {
-    if [ $? -ne 0 ]; then
-        log_error "Deployment failed!"
-        log_info "Run 'eb logs $ENV_NAME' to view error logs"
-    fi
-}
-
-trap cleanup EXIT
-
-# Run main function
-main "$@"
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}   Deployment Complete!${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo -e "${BLUE}Instance Details:${NC}"
+echo "  Instance ID: $INSTANCE_ID"
+echo "  Public IP: $PUBLIC_IP"
+echo "  Public DNS: $PUBLIC_DNS"
+echo ""
+echo -e "${BLUE}Access URLs:${NC}"
+echo "  Application: http://${PUBLIC_IP}"
+echo "  Health Check: http://${PUBLIC_IP}/api/health"
+echo ""
+echo -e "${BLUE}SSH Access:${NC}"
+echo "  ssh -i ~/.ssh/${KEY_NAME}.pem ec2-user@${PUBLIC_IP}"
+echo ""
+echo -e "${BLUE}Useful Commands:${NC}"
+echo "  View logs: ssh -i ~/.ssh/${KEY_NAME}.pem ec2-user@${PUBLIC_IP} 'sudo journalctl -u tra-app -f'"
+echo "  Restart app: ssh -i ~/.ssh/${KEY_NAME}.pem ec2-user@${PUBLIC_IP} 'sudo systemctl restart tra-app'"
+echo "  Check status: ssh -i ~/.ssh/${KEY_NAME}.pem ec2-user@${PUBLIC_IP} 'sudo systemctl status tra-app'"
+echo ""
