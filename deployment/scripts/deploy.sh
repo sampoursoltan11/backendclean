@@ -280,10 +280,28 @@ mkdir -p /opt/tra-app/logs
 
 # Configure nginx
 cat > /etc/nginx/conf.d/tra-app.conf << 'NGINXCONF'
+# Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name _;
+    server_name bhp-tra-poc.duckdns.org;
+
+    return 301 https://\$server_name\$request_uri;
+}
+
+# HTTPS server
+server {
+    listen 443 ssl;
+    server_name bhp-tra-poc.duckdns.org;
     client_max_body_size 20M;
+
+    # SSL certificates (managed by Certbot)
+    ssl_certificate /etc/letsencrypt/live/bhp-tra-poc.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/bhp-tra-poc.duckdns.org/privkey.pem;
+
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
 
     # Frontend static files
     root /opt/tra-app/backend/frontend/build;

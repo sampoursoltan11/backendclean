@@ -119,7 +119,7 @@ jobs:
       if: success()
       run: |
         echo "🎉 Deployment to EC2 completed successfully!"
-        echo "Application URL: http://3.25.202.107"
+        echo "Application URL: https://bhp-tra-poc.duckdns.org"
 
     - name: Notify on Failure
       if: failure()

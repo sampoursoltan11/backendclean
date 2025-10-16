@@ -33,11 +33,35 @@ export const BACKEND_CONFIG = {
   },
 
   /**
+   * Get HTTP protocol based on current page protocol
+   * @returns {string}
+   */
+  getProtocol() {
+    // Auto-detect: if page is HTTPS, use HTTPS; if localhost, use config default
+    if (window.location.hostname === 'localhost') {
+      return this.protocol;
+    }
+    return window.location.protocol.replace(':', '');
+  },
+
+  /**
+   * Get WebSocket protocol based on current page protocol
+   * @returns {string}
+   */
+  getWsProtocol() {
+    // Auto-detect: if page is HTTPS, use WSS; if localhost, use config default
+    if (window.location.hostname === 'localhost') {
+      return this.wsProtocol;
+    }
+    return window.location.protocol === 'https:' ? 'wss' : 'ws';
+  },
+
+  /**
    * Get HTTP base URL
    * @returns {string}
    */
   getHttpUrl() {
-    return `${this.protocol}://${this.getBackendHost()}`;
+    return `${this.getProtocol()}://${this.getBackendHost()}`;
   },
 
   /**
@@ -45,7 +69,7 @@ export const BACKEND_CONFIG = {
    * @returns {string}
    */
   getWsUrl() {
-    return `${this.wsProtocol}://${this.getBackendHost()}`;
+    return `${this.getWsProtocol()}://${this.getBackendHost()}`;
   }
 };
 
