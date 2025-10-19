@@ -869,17 +869,41 @@ export class MessageFormatter {
               </svg>
               Next Steps:
             </h4>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              ${nextSteps.map((step, idx) => `
-                <div style="background: white; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #10b981; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                  <div style="width: 24px; height: 24px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; margin-right: 12px; flex-shrink: 0;">
-                    ${idx + 1}
-                  </div>
-                  <div style="color: #1f2937; font-size: 0.95rem;">
-                    ${step}
-                  </div>
-                </div>
-              `).join('')}
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              ${nextSteps.map((step, idx) => {
+                // Determine the command and button text based on the step content
+                let command = '';
+                let buttonText = '';
+                // Check for finalize FIRST before review (more specific)
+                if (step.toLowerCase().includes('finalize assessment') || step.toLowerCase().includes('finalize')) {
+                  command = 'finalize assessment';
+                  buttonText = 'Finalize the current assessment';
+                } else if (step.toLowerCase().includes('review my answers') || step.toLowerCase().includes('see all your responses')) {
+                  command = 'review my answers';
+                  buttonText = 'Review the Answers';
+                } else {
+                  buttonText = step;
+                  command = step.toLowerCase();
+                }
+
+                return `
+                  <button onclick="window.populateInput('${command}'); setTimeout(() => Alpine.$data(document.querySelector('[x-data]')).sendMessage(), 100);"
+                          style="flex: 1 1 calc(50% - 5px); min-width: 200px; padding: 14px 16px; background: white; border: 2px solid #10b981; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);"
+                          onmouseover="this.style.borderColor='#059669'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(16, 185, 129, 0.2)'; this.style.background='#f0fdf4'"
+                          onmouseout="this.style.borderColor='#10b981'; this.style.transform=''; this.style.boxShadow='0 1px 3px rgba(0, 0, 0, 0.05)'; this.style.background='white'">
+                    <div style="display: flex; align-items: center;">
+                      <div style="flex-shrink: 0; width: 32px; height: 32px; background: #d1fae5; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <div style="width: 24px; height: 24px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">
+                          ${idx + 1}
+                        </div>
+                      </div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${buttonText}</div>
+                      </div>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : ''}

@@ -154,7 +154,11 @@ When user wants to finalize/submit an assessment:
 - Help users track their progress
 - Explain state changes clearly
 
-**IMPORTANT:** When reviewing answers, structure the output clearly with proper headings and bullet points for readability.
+**IMPORTANT:**
+- When reviewing answers, structure the output clearly with proper headings and bullet points for readability
+- The current assessment ID will be provided in the user's message as "Current assessment ID from context: TRA-XXXX-XXXXXX"
+- Use this assessment ID when calling tools like review_answers(), update_state(), generate_assessor_link(), etc.
+- If no assessment ID is provided in the message or context, ask the user to specify which assessment they want to work with
 
 Session ID: {session_id}
 """.format(session_id=self.session_id)
@@ -164,9 +168,25 @@ Session ID: {session_id}
         logger.debug(f"StatusAgent.invoke_async called with message: {message!r}, context: {context!r}")
         if context is None:
             context = {}
+
+        # Extract assessment_id from context or message
+        import re
+        assessment_id = context.get('assessment_id')
+        if not assessment_id and isinstance(message, str):
+            match = re.search(r"TRA-\d{4}-[A-Z0-9]+", message, re.IGNORECASE)
+            if match:
+                assessment_id = match.group(0)
+                context['assessment_id'] = assessment_id
+
+        # If we have assessment_id, append it to the message so the LLM knows which assessment to work with
+        augmented_message = message
+        if assessment_id:
+            augmented_message = f"{message}\n\nCurrent assessment ID from context: {assessment_id}"
+            logger.debug(f"StatusAgent: Augmented message with assessment_id: {assessment_id}")
+
         try:
             result = await self.agent.invoke_async(
-                message,
+                augmented_message,
                 session_manager=self.session_manager
             )
             context['last_message'] = str(result)
