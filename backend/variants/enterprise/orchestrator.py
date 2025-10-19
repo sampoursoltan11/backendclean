@@ -158,7 +158,22 @@ Session ID: {session_id}
             context['last_routed_agent'] = agent_type
             logger.debug(f"Qualifying questions mode active, routing to: {agent_type}")
             return self.question_agent, context, None
-        
+
+        # Priority 0.5: Batch update commands should always go to Question Agent
+        if '[BATCH_UPDATE]' in message:
+            agent_type = 'question'
+            context['intent_extraction'] = {
+                'method': 'batch_update',
+                'intent': [agent_type],
+                'confidence': 1.0,
+                'reasoning': 'Batch update command detected, routing to Question Agent'
+            }
+            context['clarification_needed'] = False
+            context['clarification_prompt'] = None
+            context['last_routed_agent'] = agent_type
+            logger.debug(f"Batch update detected, routing to: {agent_type}")
+            return self.question_agent, context, None
+
         # Priority 1: Finalize/submit commands should always go to Status Agent
         finalize_pattern = r'\b(finali[sz]e|submit)(\s+(assessment|tra))?\b'
         if re.search(finalize_pattern, message_lower, re.IGNORECASE):

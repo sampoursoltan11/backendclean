@@ -1082,8 +1082,9 @@ export class MessageFormatter {
         continue;
       }
 
-      // Match question line (e.g., "• **Q (DP-01):** Question text...")
-      const questionMatch = line.match(/^[•·]\s*\*\*Q\s*\(([A-Z]+-\d+)\):\*\*\s*(.+)$/i);
+      // Match question line (e.g., "• **Q (DP-01):** Question text..." or "• **Q (C8 Q 3.01):** Question text...")
+      // Pattern matches both simple (AI-04, IP-01) and complex (C8 Q 3.01, D1 Q 4.01) formats
+      const questionMatch = line.match(/^[•·]\s*\*\*Q\s*\(([A-Z0-9 Q.-]+)\):\*\*\s*(.+)$/i);
       if (questionMatch) {
         if (currentQuestion) {
           // Save previous question before starting new one
