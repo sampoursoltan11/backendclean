@@ -192,11 +192,21 @@ async def review_answers(assessment_id: str) -> dict:
             # Dict format: {"third_party": {"name": "Third Party Risk", ...}, ...}
             risk_areas = {area_id: area_data.get("name", area_id.replace('_', ' ').title())
                          for area_id, area_data in risk_areas_raw.items()}
+            # Extract questions from nested structure
+            all_questions = []
+            for area_id, area_data in risk_areas_raw.items():
+                area_questions = area_data.get("questions", [])
+                # Add risk_area field to each question for consistency
+                for q in area_questions:
+                    if "risk_area" not in q:
+                        q["risk_area"] = area_id
+                    all_questions.append(q)
+            questions = all_questions
         else:
             # List format: [{"id": "data_security", "name": "Data Security", ...}, ...]
             risk_areas = {ra['id']: ra['name'] for ra in risk_areas_raw}
+            questions = decision_tree.get("questions", [])
 
-        questions = decision_tree.get("questions", [])
         answers = assessment.get("answers", {})
         answers_by_risk_area = assessment.get("answers_by_risk_area", {})
         

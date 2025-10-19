@@ -279,7 +279,13 @@ export function createChatStore() {
     sendMessage() {
       if (!this.currentMessage.trim() || !this.connected) return;
 
-      this.addMessage('user', this.currentMessage);
+      // Don't add [BATCH_UPDATE] messages to chat history - they're internal
+      if (!this.currentMessage.includes('[BATCH_UPDATE]')) {
+        this.addMessage('user', this.currentMessage);
+      } else {
+        // Add a user-friendly message instead
+        this.addMessage('user', 'Update answers');
+      }
 
       websocketService.sendMessage(this.currentMessage, this.sessionContext);
 
@@ -541,6 +547,49 @@ export function createChatStore() {
       window.selectSearchResult = (assessmentId) => {
         this.traIdForUpload = assessmentId;
         this.validateTraId();
+      };
+
+      // Submit editable review form
+      window.submitEditableReview = (formId, assessmentId) => {
+        const form = document.getElementById(formId);
+        if (!form) {
+          console.error('Form not found:', formId);
+          return;
+        }
+
+        // Collect all textareas
+        const textareas = form.querySelectorAll('textarea[name]');
+        const updates = [];
+        const originalValues = new Map();
+
+        // Get original values from textarea content (they should contain the original answers)
+        textareas.forEach(textarea => {
+          const questionId = textarea.getAttribute('name');
+          const currentValue = textarea.value.trim();
+          const originalValue = textarea.defaultValue.trim(); // Original HTML content
+
+          originalValues.set(questionId, originalValue);
+
+          // Only include changed answers
+          if (currentValue !== originalValue) {
+            updates.push({
+              question_id: questionId,
+              answer: currentValue
+            });
+          }
+        });
+
+        if (updates.length === 0) {
+          // No changes detected
+          this.currentMessage = 'No changes detected. All answers remain the same.';
+          this.sendMessage();
+          return;
+        }
+
+        // Format message for batch update
+        const updatesJson = JSON.stringify(updates);
+        this.currentMessage = `[BATCH_UPDATE] Update answers for assessment ${assessmentId}: ${updatesJson}`;
+        this.sendMessage();
       };
 
       debugLog('Global helpers set up');

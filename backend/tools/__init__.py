@@ -20,6 +20,7 @@ from .document_tools import (
 
 from .question_tools import (
     question_flow,
+    batch_update_answers,
 )
 
 from .status_tools import (
@@ -59,6 +60,7 @@ __all__ = [
     
     # Question tools
     'question_flow',
+    'batch_update_answers',
     
     # Status tools
     'get_assessment_summary',
