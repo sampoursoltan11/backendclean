@@ -21,12 +21,24 @@ def test_direct_bedrock_access():
     try:
         import boto3
         from botocore.exceptions import ClientError
+        import sys
+        import os
 
-        bedrock = boto3.client('bedrock-runtime', region_name='ap-southeast-2')
+        # Get model ID from backend config
+        sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
+        from backend.core.config import get_settings
+        settings = get_settings()
 
-        # Try to invoke a simple model
+        bedrock = boto3.client('bedrock-runtime', region_name=settings.bedrock_region)
+
+        # Use the model ID from your backend configuration
+        model_id = settings.bedrock_model_id
+        print(f"   Using model: {model_id}")
+        print(f"   Region: {settings.bedrock_region}")
+
+        # Try to invoke the model
         response = bedrock.invoke_model(
-            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+            modelId=model_id,
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 100,
@@ -46,8 +58,8 @@ def test_direct_bedrock_access():
         print(f"   Model response: {message[:100]}")
         return True
 
-    except ImportError:
-        print(f"   ⚠️  boto3 not installed - cannot test direct access")
+    except ImportError as e:
+        print(f"   ⚠️  Missing dependency: {e}")
         return None
     except ClientError as e:
         print(f"   ❌ Bedrock access denied: {e.response['Error']['Code']}")
