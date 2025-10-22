@@ -703,6 +703,24 @@ export class MessageFormatter {
   }
 
   /**
+   * Convert URLs to clickable links
+   * @param {string} text - Text with potential URLs
+   * @returns {string} Text with clickable links
+   */
+  linkifyUrls(text) {
+    // URL regex pattern - matches http://, https://, and www. URLs
+    const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+
+    return text.replace(urlPattern, (url) => {
+      // Add http:// to www. URLs
+      const href = url.startsWith('www.') ? 'http://' + url : url;
+
+      // Return clickable link with styling
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline; font-weight: 500; cursor: pointer;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#3b82f6'">${url}</a>`;
+    });
+  }
+
+  /**
    * Format AI analysis box
    * @param {string} content - Message content
    * @returns {string} Formatted HTML
@@ -712,6 +730,9 @@ export class MessageFormatter {
     let formatted = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
+
+    // Step 1.5: Convert URLs to clickable links
+    formatted = this.linkifyUrls(formatted);
 
     // Simple styling for assessment creation message
     if (formatted.includes('Assessment Created Successfully')) {

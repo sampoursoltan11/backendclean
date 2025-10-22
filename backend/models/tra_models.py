@@ -114,7 +114,13 @@ class TraAssessment(BaseEntity):
     
     # NEW: Document linking
     linked_documents: List[Dict[str, Any]] = Field(default_factory=list, description="Documents linked to this assessment")
-    
+
+    # NEW: Question-level comments for review workflow
+    question_comments: Dict[str, List[Dict[str, Any]]] = Field(
+        default_factory=dict,
+        description="Comments per question: {question_id: [{comment_id, author, role, comment, timestamp}]}"
+    )
+
     # Workflow state
     current_state: AssessmentState = Field(default=AssessmentState.DRAFT, description="Current workflow state")
     

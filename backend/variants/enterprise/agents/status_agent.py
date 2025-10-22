@@ -58,6 +58,8 @@ class StatusAgent:
         
         # Create specialized agent
         from backend.tools import list_kb_items
+        from backend.tools.review_tools import submit_for_review
+
         self.agent = Agent(
             model=model,
             system_prompt=self._get_system_prompt(),
@@ -65,10 +67,10 @@ class StatusAgent:
                 get_assessment_summary,
                 check_status,
                 review_answers,
-                generate_assessor_link,
                 export_assessment,
                 update_state,
                 list_kb_items,
+                submit_for_review,  # Generates per-risk-area assessor links
             ],
             callback_handler=None
         )
@@ -149,12 +151,14 @@ Next Step: [Clear action]"
 
 **Finalization Process:**
 When user wants to finalize/submit an assessment:
-1. Use update_state tool to change status from "draft" to "submitted"
-2. Use generate_assessor_link tool to create review link
-3. Explain what happens next:
-   - Assessment locked from editing
-   - Assessor receives link for review
-   - User can track review status
+1. Call submit_for_review(assessment_id) tool
+2. IMPORTANT: Show the EXACT message returned by the tool's "message" field to the user
+3. DO NOT reformat or summarize - the tool provides a pre-formatted message with:
+   - Per-risk-area assessor links (filtered review.html URLs)
+   - Completion stats for each risk area (complete vs incomplete)
+   - Next steps for the user
+4. The tool only generates links for 100% complete risk areas
+5. Simply output: tool_result['message']
 
 **Key Principles:**
 - ALWAYS use review_answers tool when user asks to review answers

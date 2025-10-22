@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>TRA Review - Assessment Group</title>
+
+    <!-- Tailwind CSS (matching main app) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js for reactivity -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+    <style>
+        .comment-assessor {
+            background: #fef2f2;
+            border-left: 3px solid #dc2626;
+        }
+        .comment-requestor {
+            background: #f0fdf4;
+            border-left: 3px solid #16a34a;
+        }
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-sans antialiased">
+    <div x-data="reviewApp()" x-init="init()" class="min-h-screen">
+
+        <!-- Notification Toast -->
+        <div x-show="notification.show"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform -translate-y-4"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed top-4 right-4 z-50 max-w-md notification"
+             style="display: none;">
+            <div class="rounded-lg shadow-lg p-4 flex items-start gap-3"
+                 :class="{
+                    'bg-green-50 border-l-4 border-green-500': notification.type === 'success',
+                    'bg-red-50 border-l-4 border-red-500': notification.type === 'error',
+                    'bg-blue-50 border-l-4 border-blue-500': notification.type === 'info'
+                 }">
+                <div class="flex-shrink-0">
+                    <svg x-show="notification.type === 'success'" class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <svg x-show="notification.type === 'error'" class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <svg x-show="notification.type === 'info'" class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="font-semibold"
+                       :class="{
+                           'text-green-800': notification.type === 'success',
+                           'text-red-800': notification.type === 'error',
+                           'text-blue-800': notification.type === 'info'
+                       }"
+                       x-text="notification.message"></p>
+                </div>
+                <button @click="notification.show = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900" x-text="'Assessment Review: ' + assessmentId"></h1>
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span x-text="projectName"></span>
+                            <span class="mx-2">•</span>
+                            <span class="capitalize px-2 py-0.5 text-xs rounded-full font-medium"
+                                  :class="{
+                                      'bg-gray-100 text-gray-700': currentState === 'draft',
+                                      'bg-blue-100 text-blue-700': currentState === 'submitted',
+                                      'bg-yellow-100 text-yellow-700': currentState === 'under_review',
+                                      'bg-red-100 text-red-700': currentState === 'sent_back',
+                                      'bg-green-100 text-green-700': currentState === 'finalized'
+                                  }"
+                                  x-text="currentState.replace('_', ' ').toUpperCase()">
+                            </span>
+                            <span class="mx-2">•</span>
+                            <span class="px-3 py-0.5 text-xs rounded-full font-semibold"
+                                  :class="mode === 'assessor' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'"
+                                  x-text="mode === 'assessor' ? '👤 Assessor View' : '✏️ Requestor View'">
+                            </span>
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Completion</div>
+                        <div class="text-2xl font-bold text-emerald-600" x-text="completionPercentage + '%'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="flex items-center justify-center py-20">
+            <div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p class="text-gray-600">Loading review...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div x-show="error" class="max-w-7xl mx-auto px-6 py-8">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 class="text-red-800 font-semibold mb-2">Error Loading Review</h3>
+                <p class="text-red-700" x-text="error"></p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div x-show="!loading && !error" class="max-w-7xl mx-auto px-6 py-8">
+
+            <!-- Questions by Risk Area -->
+            <template x-for="(riskAreaData, riskAreaId) in groupedQuestions" :key="riskAreaId">
+                <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 pb-3 border-b border-gray-200"
+                        x-text="riskAreaData.name"></h2>
+
+                    <!-- Questions -->
+                    <div class="space-y-6">
+                        <template x-for="qa in riskAreaData.questions" :key="qa.question_id">
+                            <div class="border-l-4 border-blue-400 pl-5 py-3">
+
+                                <!-- Question -->
+                                <div class="mb-3">
+                                    <span class="font-semibold text-blue-600" x-text="'Q (' + qa.question_id + '):'"></span>
+                                    <span class="text-gray-800 ml-2" x-text="qa.question"></span>
+                                </div>
+
+                                <!-- Answer (editable for requestor in SENT_BACK, readonly for assessor) -->
+                                <div class="mb-4">
+                                    <strong class="text-gray-700 text-sm">Answer:</strong>
+
+                                    <!-- Requestor can edit when state is sent_back -->
+                                    <template x-if="mode === 'requestor' && currentState === 'sent_back'">
+                                        <textarea
+                                            :name="qa.question_id"
+                                            class="w-full mt-2 p-3 border-2 border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                                            rows="2"
+                                            x-model="qa.answer"
+                                            placeholder="Enter your answer..."
+                                        ></textarea>
+                                    </template>
+
+                                    <!-- Readonly for assessor or other states -->
+                                    <template x-if="mode === 'assessor' || (mode === 'requestor' && currentState !== 'sent_back')">
+                                        <div class="mt-2 p-3 bg-gray-50 rounded border border-gray-200 text-sm"
+                                             x-text="qa.answer || 'Not answered'"></div>
+                                    </template>
+                                </div>
+
+                                <!-- Comments Section -->
+                                <div class="bg-gray-50 rounded-lg p-4 mt-3">
+                                    <div class="font-semibold text-sm text-gray-700 mb-3 flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                        Comments
+                                    </div>
+
+                                    <!-- Existing Comments -->
+                                    <div x-show="comments[qa.question_id] && comments[qa.question_id].length > 0"
+                                         class="space-y-2 mb-3">
+                                        <template x-for="comment in comments[qa.question_id]" :key="comment.comment_id">
+                                            <div class="rounded-lg p-3"
+                                                 :class="comment.role === 'assessor' ? 'comment-assessor' : 'comment-requestor'">
+                                                <div class="flex justify-between items-start mb-1">
+                                                    <span class="font-semibold text-xs"
+                                                          :class="comment.role === 'assessor' ? 'text-red-800' : 'text-green-800'"
+                                                          x-text="comment.author + ' (' + comment.role + ')'"></span>
+                                                    <span class="text-xs text-gray-500" x-text="formatDate(comment.timestamp)"></span>
+                                                </div>
+                                                <p class="text-sm text-gray-800" x-text="comment.comment"></p>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div x-show="!comments[qa.question_id] || comments[qa.question_id].length === 0"
+                                         class="text-sm text-gray-500 mb-3 italic">No comments yet</div>
+
+                                    <!-- Add Comment Form -->
+                                    <template x-if="canAddComments()">
+                                        <div class="flex gap-2 mt-3">
+                                            <input
+                                                type="text"
+                                                :id="'comment-' + qa.question_id"
+                                                class="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-blue-500 focus:outline-none"
+                                                :placeholder="mode === 'assessor' ? 'Add review comment...' : 'Respond to assessor...'"
+                                                @keyup.enter="addComment(qa.question_id, $event.target.value, $event.target)"
+                                            >
+                                            <button
+                                                @click="addComment(qa.question_id, document.getElementById('comment-' + qa.question_id).value, document.getElementById('comment-' + qa.question_id))"
+                                                class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium transition">
+                                                Post
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Action Buttons -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mt-6 sticky bottom-0">
+                <!-- Requestor Actions -->
+                <template x-if="mode === 'requestor' && currentState === 'sent_back'">
+                    <div class="flex gap-4 justify-end">
+                        <button
+                            @click="saveAnswers()"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition shadow-md">
+                            💾 Save Answers
+                        </button>
+                        <button
+                            @click="resubmitAnswers()"
+                            class="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold transition shadow-md">
+                            🔄 Re-Submit for Review
+                        </button>
+                    </div>
+                </template>
+
+                <!-- Assessor Actions -->
+                <template x-if="mode === 'assessor' && (currentState === 'submitted' || currentState === 'under_review')">
+                    <div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Overall Feedback (Optional)
+                            </label>
+                            <textarea
+                                x-model="overallComment"
+                                class="w-full p-3 border-2 border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                                rows="3"
+                                placeholder="Add general feedback about the assessment..."
+                            ></textarea>
+                        </div>
+                        <div class="flex gap-4 justify-end">
+                            <button
+                                @click="makeDecision('reject')"
+                                class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition shadow-md">
+                                ❌ Send Back for Revisions
+                            </button>
+                            <button
+                                @click="makeDecision('approve')"
+                                class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold transition shadow-md">
+                                ✅ Approve Assessment
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Read-only message -->
+                <template x-if="(mode === 'requestor' && currentState !== 'sent_back') || (mode === 'assessor' && currentState === 'finalized')">
+                    <div class="text-center text-gray-600 py-2">
+                        <p x-show="currentState === 'finalized'" class="text-green-600 font-semibold">✅ This assessment has been finalized.</p>
+                        <p x-show="currentState === 'submitted'" class="text-blue-600 font-semibold">⏳ Assessment is currently under review.</p>
+                        <p x-show="currentState === 'draft'" class="text-gray-600 font-semibold">📝 Assessment is in draft mode.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function reviewApp() {
+            return {
+                // State
+                loading: true,
+                error: null,
+                assessmentId: '',
+                mode: 'requestor',
+
+                // Assessment data
+                projectName: '',
+                currentState: '',
+                completionPercentage: 0,
+                requestorName: '',
+
+                // Q&A and comments
+                qaList: [],
+                comments: {},
+                groupedQuestions: {},
+
+                // Assessor feedback
+                overallComment: '',
+
+                // Notification system
+                notification: {
+                    show: false,
+                    message: '',
+                    type: 'info' // 'success', 'error', 'info'
+                },
+
+                // Show notification helper
+                showNotification(message, type = 'info') {
+                    this.notification.message = message;
+                    this.notification.type = type;
+                    this.notification.show = true;
+
+                    // Auto-hide after 5 seconds
+                    setTimeout(() => {
+                        this.notification.show = false;
+                    }, 5000);
+                },
+
+                // Initialize
+                async init() {
+                    const params = new URLSearchParams(window.location.search);
+                    this.assessmentId = params.get('tra');
+                    this.mode = params.get('mode') || 'requestor';
+                    const riskAreas = params.get('risk_areas') || '';
+
+                    if (!this.assessmentId) {
+                        this.error = 'No assessment ID provided in URL';
+                        this.loading = false;
+                        return;
+                    }
+
+                    await this.loadReviewData(riskAreas);
+                },
+
+                // Load review data
+                async loadReviewData(riskAreas = '') {
+                    try {
+                        const url = `/api/review/${this.assessmentId}?mode=${this.mode}` +
+                                  (riskAreas ? `&risk_areas=${riskAreas}` : '');
+
+                        const response = await fetch(url);
+
+                        if (!response.ok) {
+                            throw new Error(`Failed to load review: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+
+                        this.projectName = data.project_name || 'Untitled Project';
+                        this.currentState = data.current_state || 'draft';
+                        this.completionPercentage = data.completion_percentage || 0;
+                        this.requestorName = data.requestor_name || 'Unknown';
+                        this.qaList = data.qa_pairs || [];
+                        this.comments = data.comments || {};
+
+                        // Store original answers for change detection
+                        // IMPORTANT: Store a copy of the original answer so we can detect changes
+                        // even when using x-model two-way binding
+                        for (const qa of this.qaList) {
+                            qa._originalAnswer = qa.answer;
+                        }
+
+                        this.groupQuestions();
+                        this.loading = false;
+
+                    } catch (err) {
+                        this.error = err.message;
+                        this.loading = false;
+                    }
+                },
+
+                // Group questions by risk area
+                groupQuestions() {
+                    const grouped = {};
+
+                    for (const qa of this.qaList) {
+                        const riskArea = qa.risk_area || 'other';
+
+                        if (!grouped[riskArea]) {
+                            grouped[riskArea] = {
+                                name: qa.risk_area || 'Other',
+                                questions: []
+                            };
+                        }
+
+                        grouped[riskArea].questions.push(qa);
+                    }
+
+                    this.groupedQuestions = grouped;
+                },
+
+                // Collect all changed answers
+                collectChangedAnswers() {
+                    const updates = [];
+
+                    for (const qa of this.qaList) {
+                        // Compare current answer to original answer stored when data was loaded
+                        // We use _originalAnswer because qa.answer is two-way bound and already reflects changes
+                        const currentAnswer = (qa.answer || '').trim();
+                        const originalAnswer = (qa._originalAnswer || '').trim();
+
+                        // Only include if changed from original
+                        if (currentAnswer !== originalAnswer) {
+                            updates.push({
+                                question_id: qa.question_id,
+                                answer: currentAnswer
+                            });
+                            console.log(`Detected change in ${qa.question_id}: "${originalAnswer}" -> "${currentAnswer}"`);
+                        }
+                    }
+
+                    return updates;
+                },
+
+                // Save all changed answers to backend
+                async saveChangedAnswers() {
+                    const updates = this.collectChangedAnswers();
+
+                    if (updates.length === 0) {
+                        return { success: true, message: 'No changes to save', updated_count: 0 };
+                    }
+
+                    try {
+                        const response = await fetch(`/api/review/${this.assessmentId}/answers`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ updates })
+                        });
+
+                        if (!response.ok) throw new Error('Failed to save answers');
+
+                        const result = await response.json();
+                        console.log(`Saved ${result.updated_count} answer(s)`);
+
+                        // IMPORTANT: Update the internal qaList and _originalAnswer
+                        // so that when we reload, the data is already updated
+                        // and subsequent saves can detect new changes
+                        for (const update of updates) {
+                            const qa = this.qaList.find(q => q.question_id === update.question_id);
+                            if (qa) {
+                                qa.answer = update.answer;
+                                qa._originalAnswer = update.answer; // Reset original to current after save
+                            }
+                        }
+
+                        return result;
+
+                    } catch (err) {
+                        console.error('Error saving answers:', err);
+                        throw err;
+                    }
+                },
+
+                // Add comment
+                async addComment(questionId, commentText, inputElement) {
+                    if (!commentText || !commentText.trim()) return;
+
+                    try {
+                        // Save any changed answers BEFORE posting comment
+                        await this.saveChangedAnswers();
+
+                        const response = await fetch(`/api/review/${this.assessmentId}/comment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                question_id: questionId,
+                                comment: commentText.trim(),
+                                author: this.mode === 'assessor' ? 'Assessor' : this.requestorName,
+                                role: this.mode
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('Failed to add comment');
+
+                        inputElement.value = '';
+                        await this.loadReviewData();
+
+                    } catch (err) {
+                        this.showNotification('Error adding comment: ' + err.message, 'error');
+                    }
+                },
+
+                // Save answers explicitly (requestor)
+                async saveAnswers() {
+                    try {
+                        const saveResult = await this.saveChangedAnswers();
+
+                        if (saveResult.updated_count > 0) {
+                            this.showNotification(`Saved ${saveResult.updated_count} answer(s) successfully!`, 'success');
+                            await this.loadReviewData();
+                        } else {
+                            this.showNotification('No changes to save', 'info');
+                        }
+
+                    } catch (err) {
+                        this.showNotification('Error saving answers: ' + err.message, 'error');
+                    }
+                },
+
+                // Resubmit answers (requestor)
+                async resubmitAnswers() {
+                    // Check if there are unsaved changes
+                    const updates = this.collectChangedAnswers();
+
+                    if (updates.length > 0) {
+                        const confirmMsg = `You have ${updates.length} unsaved answer change(s).\n\nDo you want to save them before resubmitting?`;
+                        if (confirm(confirmMsg)) {
+                            await this.saveAnswers();
+                        }
+                    }
+
+                    if (!confirm('Re-submit this assessment for review?')) return;
+
+                    try {
+                        // Call resubmit endpoint which will:
+                        // - Analyze completion by risk area
+                        // - Generate new assessor links for complete risk areas
+                        // - Update state to SUBMITTED
+                        const response = await fetch(`/api/review/${this.assessmentId}/resubmit`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to resubmit assessment');
+                        }
+
+                        const result = await response.json();
+
+                        // Show success with link generation info
+                        const linkCount = result.total_submitted || 0;
+                        const message = linkCount > 0
+                            ? `Assessment re-submitted successfully! Generated ${linkCount} new assessor link(s).`
+                            : 'Assessment re-submitted! Complete remaining questions to generate assessor links.';
+
+                        this.showNotification(message, 'success');
+                        console.log('Resubmit result:', result);
+
+                        await this.loadReviewData();
+
+                    } catch (err) {
+                        this.showNotification('Error resubmitting: ' + err.message, 'error');
+                    }
+                },
+
+                // Make decision (assessor)
+                async makeDecision(decision) {
+                    const action = decision === 'approve' ? 'approve' : 'send back';
+                    if (!confirm(`Are you sure you want to ${action} this assessment?`)) return;
+
+                    try {
+                        const response = await fetch(`/api/review/${this.assessmentId}/decision`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                decision: decision,
+                                overall_comment: this.overallComment || null,
+                                assessor_name: 'Assessor'
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('Failed to process decision');
+
+                        const result = await response.json();
+                        this.showNotification(result.message, 'success');
+                        await this.loadReviewData();
+
+                    } catch (err) {
+                        this.showNotification('Error processing decision: ' + err.message, 'error');
+                    }
+                },
+
+                // Check if user can add comments
+                canAddComments() {
+                    if (this.mode === 'assessor') {
+                        return ['submitted', 'under_review'].includes(this.currentState);
+                    } else {
+                        return this.currentState === 'sent_back';
+                    }
+                },
+
+                // Format date
+                formatDate(isoString) {
+                    if (!isoString) return '';
+                    const date = new Date(isoString);
+                    return date.toLocaleDateString() + ' ' +
+                           date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+            }
+        }
+    </script>
+</body>
+</html>

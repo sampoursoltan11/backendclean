@@ -67,8 +67,8 @@ class Settings(BaseSettings):
     jwt_expiration_hours: int = 24
     
     # Static Links Configuration
-    base_url: str = "https://tra-system.company.com"
-    assessor_base_url: str = "https://tra-system.company.com/assess"
+    base_url: str = "http://localhost:8000"
+    assessor_base_url: str = "http://localhost:8000"
     
     # WebSocket Configuration
     websocket_url: str = "wss://tra-system.company.com/ws"
