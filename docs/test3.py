@@ -22,7 +22,7 @@ def test_direct_bedrock_access():
         import boto3
         from botocore.exceptions import ClientError
 
-        bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+        bedrock = boto3.client('bedrock-runtime', region_name='ap-southeast-2')
 
         # Try to invoke a simple model
         response = bedrock.invoke_model(
