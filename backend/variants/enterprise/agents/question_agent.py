@@ -13,6 +13,7 @@ from strands.session import FileSessionManager
 from backend.core.config import get_settings
 from backend.tools import (
     question_flow,
+    batch_update_answers,
     suggest_answer_from_context,
 )
 
@@ -58,6 +59,7 @@ class QuestionAgent:
             system_prompt=self._get_system_prompt(),
             tools=[
                 question_flow,
+                batch_update_answers,
                 suggest_answer_from_context,
             ],
             callback_handler=None
@@ -97,6 +99,24 @@ Accept suggestion or provide your own answer."
 - Track and show progress percentage
 - Be encouraging and supportive
 
+**Batch Updating Answers:**
+When the user submits multiple answer updates from the editable review form (e.g., "[BATCH_UPDATE]"), you'll receive:
+- assessment_id: The TRA ID
+- updates: List of {{question_id, answer}} pairs
+
+Use the batch_update_answers tool to process all updates at once:
+- It validates each answer
+- Updates DynamoDB
+- Recalculates completion percentage
+- Returns detailed results
+
+After batch update, confirm:
+"✓ Updated [X] answer(s) successfully!
+[Show any errors if present]
+Overall Progress: [Y]%
+
+You can review your updated answers by saying 'review my answers'."
+
 Session ID: {session_id}
 """.format(session_id=self.session_id)
     
@@ -110,6 +130,10 @@ Session ID: {session_id}
         # Handle qualifying questions mode
         if context.get('qualifying_questions_mode'):
             return await self._handle_qualifying_questions(message, context)
+
+        # Handle batch update
+        if '[BATCH_UPDATE]' in message:
+            return await self._handle_batch_update(message, context)
 
         logger.debug(f"=== INVOKE === Message: {message}")
         logger.debug(f"Context: assessment_id={context.get('assessment_id')}, risk_area={context.get('risk_area')}, awaiting_selection={context.get('awaiting_risk_area_selection')}")
@@ -490,10 +514,86 @@ Session ID: {session_id}
         return {
             "name": "Question Agent",
             "domain": "Question Flow Management",
-            "tools": 2,
+            "tools": 3,
             "status": "active"
         }
-    
+
+    async def _handle_batch_update(self, message: str, context: Dict[str, Any]) -> str:
+        """Handle batch update of answers from editable review form."""
+        import re
+        import json
+
+        try:
+            # Extract assessment ID
+            tra_match = re.search(r"TRA-\d{4}-[A-Z0-9]+", message, re.IGNORECASE)
+            if not tra_match:
+                return "❌ Could not find assessment ID in the request."
+
+            assessment_id = tra_match.group(0)
+
+            # Extract JSON updates
+            json_match = re.search(r'\[BATCH_UPDATE\].*?(\[.*\])', message, re.DOTALL)
+            if not json_match:
+                return "❌ Could not parse updates from the request."
+
+            try:
+                updates = json.loads(json_match.group(1))
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error: {e}")
+                return f"❌ Invalid update format: {str(e)}"
+
+            if not isinstance(updates, list) or len(updates) == 0:
+                return "❌ No updates provided."
+
+            # Call batch_update_answers tool
+            result = await batch_update_answers(assessment_id, updates)
+
+            if not result.get('success'):
+                error_msg = result.get('error', 'Unknown error')
+                return f"❌ Batch update failed: {error_msg}"
+
+            # Format success response
+            updated_count = result.get('updated_count', 0)
+            error_count = result.get('error_count', 0)
+            completion = result.get('completion_percentage', 0)
+            results = result.get('results', [])
+
+            if updated_count == 0 and error_count == 0:
+                response = "No changes were made.\n\n"
+            else:
+                response = f"✅ Successfully updated {updated_count} answer(s)!\n\n"
+
+                # List the updated questions
+                if results:
+                    response += "**Updated Questions:**\n"
+                    for res in results:
+                        q_id = res.get('question_id', 'Unknown')
+                        new_val = res.get('new_answer', '')
+                        # Truncate long answers for display
+                        display_val = new_val if len(str(new_val)) <= 50 else str(new_val)[:50] + '...'
+                        response += f"  • **{q_id}:** {display_val}\n"
+                    response += "\n"
+
+            if error_count > 0:
+                response += f"⚠️ {error_count} error(s) occurred:\n"
+                for error in result.get('errors', []):
+                    q_id = error.get('question_id', 'Unknown')
+                    err_msg = error.get('error', 'Unknown error')
+                    response += f"  • {q_id}: {err_msg}\n"
+                response += "\n"
+
+            response += f"📊 **Overall Progress:** {completion}%\n\n"
+
+            if updated_count > 0:
+                response += "You can review all your answers again by saying 'review my answers'."
+
+            context['last_message'] = response
+            return response
+
+        except Exception as e:
+            logger.error(f"Batch update error: {e}", exc_info=True)
+            return f"❌ An error occurred during batch update: {str(e)}"
+
     async def _handle_qualifying_questions(self, message: str, context: Dict[str, Any]) -> str:
         """Handle qualifying questions to automatically determine risk areas."""
         from backend.tools.question_tools import get_decision_tree

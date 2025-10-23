@@ -1171,9 +1171,191 @@ async def get_risk_areas(assessment_id: str) -> dict:
             "risk_areas": risk_area_status,
             "total_risk_areas": len(risk_area_status)
         }
-        
+
     except Exception as e:
         return {
             "success": False,
             "error": str(e)
+        }
+
+
+@tool
+async def batch_update_answers(
+    assessment_id: str,
+    updates: List[Dict[str, Any]]
+) -> dict:
+    """
+    Batch update multiple answers at once.
+
+    Args:
+        assessment_id: ID of the assessment
+        updates: List of updates, each containing:
+            - question_id: ID of the question
+            - answer: New answer value
+            - risk_area: Risk area ID (optional, will be inferred if not provided)
+
+    Returns:
+        Dictionary with batch update results
+
+    Example:
+        updates = [
+            {"question_id": "DP-01", "answer": "Yes"},
+            {"question_id": "DP-02", "answer": "No"},
+            {"question_id": "DP-03", "answer": "Updated text"}
+        ]
+    """
+    try:
+        db = get_db_service()
+
+        # Get current assessment
+        assessment = await db.get_assessment(assessment_id)
+        if not assessment:
+            return {
+                "success": False,
+                "error": f"Assessment {assessment_id} not found"
+            }
+
+        decision_tree = get_decision_tree()
+        all_answers = assessment.get('answers_by_risk_area', {})
+        active_risk_areas = assessment.get('active_risk_areas', [])
+
+        # Normalize active_risk_areas to list
+        import ast
+        if isinstance(active_risk_areas, str):
+            try:
+                active_risk_areas = ast.literal_eval(active_risk_areas)
+            except Exception:
+                active_risk_areas = [active_risk_areas]
+        if not isinstance(active_risk_areas, list):
+            active_risk_areas = [active_risk_areas]
+
+        results = []
+        errors = []
+
+        # Process each update
+        for update in updates:
+            question_id = update.get('question_id')
+            answer = update.get('answer')
+            risk_area = update.get('risk_area')
+
+            if not question_id:
+                errors.append({"update": update, "error": "Missing question_id"})
+                continue
+
+            # Find the question to get its risk_area if not provided
+            if not risk_area:
+                all_questions = decision_tree.get("questions", [])
+                question = next((q for q in all_questions if q.get("id") == question_id), None)
+                if question:
+                    risk_area = question.get("risk_area")
+                else:
+                    errors.append({"question_id": question_id, "error": "Question not found in decision tree"})
+                    continue
+
+            # Validate risk_area is active
+            if risk_area not in active_risk_areas:
+                errors.append({"question_id": question_id, "error": f"Risk area {risk_area} not active in assessment"})
+                continue
+
+            # Get or create answers dict for this risk area
+            if risk_area not in all_answers:
+                all_answers[risk_area] = {}
+
+            risk_area_answers = all_answers[risk_area]
+
+            # Validate the question exists in this risk area
+            questions = [q for q in decision_tree.get("questions", []) if q.get("risk_area") == risk_area]
+            question = next((q for q in questions if q.get("id") == question_id), None)
+
+            if not question:
+                errors.append({"question_id": question_id, "error": f"Question not found in risk area {risk_area}"})
+                continue
+
+            # Validate answer based on question type
+            question_type = question.get("type", "text")
+            normalized_answer = answer
+
+            if question.get("required", True) and (answer == "" or answer == [] or answer is None):
+                errors.append({"question_id": question_id, "error": "This question is required"})
+                continue
+
+            # Handle multiselect normalization
+            if question_type == "multiselect":
+                if isinstance(answer, str):
+                    answer_list = [a.strip() for a in answer.split(',')]
+                elif isinstance(answer, list):
+                    answer_list = answer
+                else:
+                    answer_list = [str(answer)]
+
+                options = question.get("options", [])
+                normalized_answers = []
+                for ans in answer_list:
+                    ans_lower = str(ans).lower().strip()
+                    for opt in options:
+                        if (opt.get("value", "").lower() == ans_lower or
+                            opt.get("label", "").lower() == ans_lower):
+                            normalized_answers.append(opt.get("value"))
+                            break
+                normalized_answer = normalized_answers
+
+            # Handle select normalization
+            elif question_type == "select":
+                options = question.get("options", [])
+                answer_lower = str(answer).lower().strip()
+                for opt in options:
+                    if (opt.get("value", "").lower() == answer_lower or
+                        opt.get("label", "").lower() == answer_lower):
+                        normalized_answer = opt.get("value")
+                        break
+
+            # Store old answer for tracking
+            old_answer = risk_area_answers.get(question_id, "Not answered")
+
+            # Update the answer
+            risk_area_answers[question_id] = normalized_answer
+            all_answers[risk_area] = risk_area_answers
+
+            results.append({
+                "question_id": question_id,
+                "risk_area": risk_area,
+                "old_answer": old_answer,
+                "new_answer": normalized_answer,
+                "success": True
+            })
+
+        # Recalculate overall completion percentage
+        total_applicable = 0
+        total_answered = 0
+
+        for area_id in active_risk_areas:
+            area_answers = all_answers.get(area_id, {})
+            applicable, answered = _count_applicable_questions(area_id, area_answers, decision_tree)
+            total_applicable += applicable
+            total_answered += answered
+
+        completion_percentage = round((total_answered / total_applicable) * 100, 1) if total_applicable > 0 else 0
+
+        # Update assessment in DynamoDB
+        await db.update_assessment(assessment_id, {
+            "answers_by_risk_area": all_answers,
+            "completion_percentage": completion_percentage
+        })
+
+        return {
+            "success": True,
+            "assessment_id": assessment_id,
+            "updated_count": len(results),
+            "error_count": len(errors),
+            "results": results,
+            "errors": errors,
+            "completion_percentage": completion_percentage,
+            "message": f"Successfully updated {len(results)} answer(s). {len(errors)} error(s)."
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Batch update failed"
         }

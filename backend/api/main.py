@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Dict, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -661,3 +661,227 @@ async def get_assessment_progress_api(assessment_id: str):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+# ============================================================================
+# ASSESSMENT REVIEW ENDPOINTS
+# ============================================================================
+
+from pydantic import BaseModel
+from fastapi import Query
+
+# Pydantic models for review endpoints
+class CommentRequest(BaseModel):
+    """Request model for adding comments"""
+    question_id: str
+    comment: str
+    author: str
+    role: str  # 'requestor' or 'assessor'
+
+
+class DecisionRequest(BaseModel):
+    """Request model for assessor decision"""
+    decision: str  # 'approve' or 'reject'
+    overall_comment: Optional[str] = None
+    assessor_name: Optional[str] = None
+
+
+@app.get("/api/review/{assessment_id}")
+async def get_assessment_review(
+    assessment_id: str,
+    mode: str = Query('requestor', regex='^(requestor|assessor)$'),
+    risk_areas: Optional[str] = Query(None)
+):
+    """
+    Get assessment review data for display.
+    
+    Query params:
+        mode: 'requestor' or 'assessor'
+        risk_areas: Optional comma-separated risk area IDs
+    """
+    try:
+        from backend.tools.review_tools import get_review_data
+        
+        data = await get_review_data(
+            assessment_id=assessment_id,
+            risk_areas_filter=risk_areas,
+            include_comments=True
+        )
+        
+        if 'error' in data:
+            raise HTTPException(status_code=404, detail=data['error'])
+        
+        # Add mode to response
+        data['mode'] = mode
+        
+        # Serialize timestamps
+        serialized_data = _serialize_datetimes(data)
+        
+        return JSONResponse(serialized_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching review: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/review/{assessment_id}/comment")
+async def add_review_comment(
+    assessment_id: str,
+    request: CommentRequest
+):
+    """Add a comment to a specific question"""
+    try:
+        from backend.tools.review_tools import add_question_comment
+        
+        result = await add_question_comment(
+            assessment_id=assessment_id,
+            question_id=request.question_id,
+            comment=request.comment,
+            author=request.author,
+            role=request.role
+        )
+        
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('message'))
+        
+        return JSONResponse(result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding comment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/review/{assessment_id}/decision")
+async def assessor_make_decision(
+    assessment_id: str,
+    request: DecisionRequest
+):
+    """Assessor approves or rejects assessment"""
+    try:
+        from backend.tools.review_tools import assessor_decision
+        
+        result = await assessor_decision(
+            assessment_id=assessment_id,
+            decision=request.decision,
+            overall_comment=request.overall_comment,
+            assessor_name=request.assessor_name
+        )
+        
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('message'))
+        
+        return JSONResponse(result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing decision: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update answers from review page
+@app.post("/api/review/{assessment_id}/answers")
+async def update_review_answers(assessment_id: str, request: Request):
+    """
+    Update multiple answers from the review page (requestor editing after sent_back).
+    Uses existing batch_update_answers tool.
+    """
+    try:
+        from backend.tools.question_tools import batch_update_answers
+
+        body = await request.json()
+        updates = body.get('updates', [])
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No updates provided")
+
+        # Call existing batch_update_answers tool
+        result = await batch_update_answers(assessment_id, updates)
+
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('error', 'Update failed'))
+
+        logger.info(f"Updated {result.get('updated_count', 0)} answers for {assessment_id}")
+
+        return JSONResponse(_serialize_datetimes(result))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating answers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Resubmit assessment for review (after answers updated)
+@app.post("/api/review/{assessment_id}/resubmit")
+async def resubmit_for_review(assessment_id: str):
+    """
+    Resubmit assessment for review after requestor has updated answers.
+    This calls submit_for_review to generate new assessor links.
+    """
+    try:
+        from backend.tools.review_tools import submit_for_review
+
+        # Call submit_for_review tool which will:
+        # 1. Analyze completion by risk area
+        # 2. Generate new assessor links for complete risk areas
+        # 3. Update state to SUBMITTED
+        result = await submit_for_review(assessment_id)
+
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('message', 'Resubmit failed'))
+
+        logger.info(f"Assessment {assessment_id} resubmitted for review")
+
+        return JSONResponse(_serialize_datetimes(result))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resubmitting assessment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update assessment state
+@app.post("/api/assessments/{assessment_id}/state")
+async def update_assessment_state(assessment_id: str, request: Request):
+    """
+    Update assessment state (for resubmit workflow).
+    """
+    try:
+        from backend.tools.status_tools import update_state
+
+        body = await request.json()
+        new_state = body.get('new_state')
+
+        if not new_state:
+            raise HTTPException(status_code=400, detail="new_state is required")
+
+        # Call update_state tool
+        result = await update_state(assessment_id, new_state)
+
+        if not result.get('success'):
+            raise HTTPException(status_code=400, detail=result.get('message', 'State update failed'))
+
+        logger.info(f"Updated state for {assessment_id} to {new_state}")
+
+        return JSONResponse(_serialize_datetimes(result))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating state: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Serve review.html page
+@app.get("/review.html")
+async def review_page():
+    """Serve the review page for assessors and requestors"""
+    import os
+    # Go up from backend/api/main.py -> backend/api -> backend -> project_root
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    review_file = os.path.join(project_root, "frontend", "review.html")
+    if os.path.exists(review_file):
+        return FileResponse(review_file)
+    else:
+        return {"error": f"Review page not found at {review_file}"}

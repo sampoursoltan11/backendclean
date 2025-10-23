@@ -61,6 +61,11 @@ export class MessageFormatter {
       return this.formatRiskAreaButtons(content);
     }
 
+    // Check for editable review
+    if (content.includes('[EDITABLE_REVIEW]')) {
+      return this.formatEditableReview(content);
+    }
+
     // Apply AI Analysis formatting
     formatted = this.formatAIAnalysis(formatted);
 
@@ -698,6 +703,24 @@ export class MessageFormatter {
   }
 
   /**
+   * Convert URLs to clickable links
+   * @param {string} text - Text with potential URLs
+   * @returns {string} Text with clickable links
+   */
+  linkifyUrls(text) {
+    // URL regex pattern - matches http://, https://, and www. URLs
+    const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+
+    return text.replace(urlPattern, (url) => {
+      // Add http:// to www. URLs
+      const href = url.startsWith('www.') ? 'http://' + url : url;
+
+      // Return clickable link with styling
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline; font-weight: 500; cursor: pointer;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#3b82f6'">${url}</a>`;
+    });
+  }
+
+  /**
    * Format AI analysis box
    * @param {string} content - Message content
    * @returns {string} Formatted HTML
@@ -707,6 +730,9 @@ export class MessageFormatter {
     let formatted = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
+
+    // Step 1.5: Convert URLs to clickable links
+    formatted = this.linkifyUrls(formatted);
 
     // Simple styling for assessment creation message
     if (formatted.includes('Assessment Created Successfully')) {
@@ -869,17 +895,41 @@ export class MessageFormatter {
               </svg>
               Next Steps:
             </h4>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              ${nextSteps.map((step, idx) => `
-                <div style="background: white; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #10b981; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                  <div style="width: 24px; height: 24px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; margin-right: 12px; flex-shrink: 0;">
-                    ${idx + 1}
-                  </div>
-                  <div style="color: #1f2937; font-size: 0.95rem;">
-                    ${step}
-                  </div>
-                </div>
-              `).join('')}
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              ${nextSteps.map((step, idx) => {
+                // Determine the command and button text based on the step content
+                let command = '';
+                let buttonText = '';
+                // Check for finalize FIRST before review (more specific)
+                if (step.toLowerCase().includes('finalize assessment') || step.toLowerCase().includes('finalize')) {
+                  command = 'finalize assessment';
+                  buttonText = 'Finalize the current assessment';
+                } else if (step.toLowerCase().includes('review my answers') || step.toLowerCase().includes('see all your responses')) {
+                  command = 'review my answers';
+                  buttonText = 'Review the Answers';
+                } else {
+                  buttonText = step;
+                  command = step.toLowerCase();
+                }
+
+                return `
+                  <button onclick="window.populateInput('${command}'); setTimeout(() => Alpine.$data(document.querySelector('[x-data]')).sendMessage(), 100);"
+                          style="flex: 1 1 calc(50% - 5px); min-width: 200px; padding: 14px 16px; background: white; border: 2px solid #10b981; border-radius: 10px; cursor: pointer; text-align: left; font-size: 0.9rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);"
+                          onmouseover="this.style.borderColor='#059669'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(16, 185, 129, 0.2)'; this.style.background='#f0fdf4'"
+                          onmouseout="this.style.borderColor='#10b981'; this.style.transform=''; this.style.boxShadow='0 1px 3px rgba(0, 0, 0, 0.05)'; this.style.background='white'">
+                    <div style="display: flex; align-items: center;">
+                      <div style="flex-shrink: 0; width: 32px; height: 32px; background: #d1fae5; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <div style="width: 24px; height: 24px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem;">
+                          ${idx + 1}
+                        </div>
+                      </div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; color: #111827; font-size: 0.95rem;">${buttonText}</div>
+                      </div>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : ''}
@@ -897,6 +947,208 @@ export class MessageFormatter {
         ` : ''}
       </div>
     `;
+  }
+
+  /**
+   * Format editable review with form inputs for each Q&A
+   * @param {string} content - Message content with [EDITABLE_REVIEW] marker
+   * @returns {string} Formatted HTML with editable form
+   */
+  formatEditableReview(content) {
+    // Remove the marker
+    let cleanContent = content.replace('[EDITABLE_REVIEW]', '').trim();
+
+    // Extract assessment ID
+    const traIdMatch = cleanContent.match(/TRA-\d{4}-[A-Z0-9]+/);
+    const assessmentId = traIdMatch ? traIdMatch[0] : '';
+
+    // Parse Q&A pairs
+    const qaPairs = this.parseQAPairs(cleanContent);
+
+    if (qaPairs.length === 0) {
+      // Fallback to regular formatting if parsing fails
+      return this.formatRegularMessage(cleanContent);
+    }
+
+    // Extract header information
+    const projectMatch = cleanContent.match(/\*\*Project:\*\*\s*(.+)/);
+    const progressMatch = cleanContent.match(/\*\*Overall Progress:\*\*\s*(.+)/);
+    const statusMatch = cleanContent.match(/\*\*Status:\*\*\s*(.+)/);
+
+    const projectName = projectMatch ? projectMatch[1].trim() : '';
+    const progress = progressMatch ? progressMatch[1].trim() : '';
+    const status = statusMatch ? statusMatch[1].trim() : '';
+
+    // Group Q&A by risk area
+    const riskAreas = {};
+    let currentRiskArea = '';
+
+    for (const qa of qaPairs) {
+      if (qa.riskArea) {
+        currentRiskArea = qa.riskArea;
+        if (!riskAreas[currentRiskArea]) {
+          riskAreas[currentRiskArea] = { name: qa.riskAreaName, pairs: [] };
+        }
+      }
+      if (currentRiskArea) {
+        riskAreas[currentRiskArea].pairs.push(qa);
+      }
+    }
+
+    // Generate unique form ID
+    const formId = `editable-review-form-${Date.now()}`;
+
+    // Build HTML
+    let html = `
+      <div style="background: #f9fafb; border: 2px solid #3b82f6; border-radius: 16px; padding: 24px; margin: 16px 0;">
+        <!-- Header -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e40af; margin: 0 0 8px 0;">
+            Assessment Review: ${assessmentId}
+          </h3>
+          ${projectName ? `<p style="color: #6b7280; margin: 4px 0;"><strong>Project:</strong> ${projectName}</p>` : ''}
+          ${progress ? `<p style="color: #6b7280; margin: 4px 0;"><strong>Overall Progress:</strong> ${progress}</p>` : ''}
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 2px; background: linear-gradient(90deg, transparent, #3b82f6, transparent); margin: 20px 0;"></div>
+
+        <form id="${formId}">
+    `;
+
+    // Render each risk area
+    for (const [riskAreaId, riskAreaData] of Object.entries(riskAreas)) {
+      html += `
+        <div style="margin-bottom: 24px;">
+          <h4 style="font-size: 1.1rem; font-weight: 600; color: #1e40af; margin-bottom: 16px;">
+            ${riskAreaData.name}
+          </h4>
+      `;
+
+      // Render each Q&A pair
+      for (const qa of riskAreaData.pairs) {
+        const textareaId = `answer-${qa.questionId}-${Date.now()}`;
+        html += `
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
+            <!-- Question -->
+            <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">
+              <span style="color: #3b82f6;">${qa.questionId}:</span> ${qa.question}
+            </label>
+
+            <!-- Answer Input -->
+            <textarea
+              id="${textareaId}"
+              name="${qa.questionId}"
+              data-risk-area="${riskAreaId}"
+              style="width: 100%; min-height: 60px; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; resize: vertical; font-family: inherit;"
+              onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
+              onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+            >${this.escapeHtml(qa.answer)}</textarea>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+    }
+
+    // Submit button
+    html += `
+          <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button type="button"
+                    onclick="window.submitEditableReview('${formId}', '${assessmentId}')"
+                    style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.2s;"
+                    onmouseover="this.style.background='#2563eb'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'"
+                    onmouseout="this.style.background='#3b82f6'; this.style.transform=''; this.style.boxShadow='none'">
+              📝 Update Answers
+            </button>
+          </div>
+        </form>
+
+        ${status ? `
+          <div style="margin-top: 20px; padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px;">
+            <strong style="color: #92400e;">Status:</strong> <span style="color: #78350f;">${status}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Parse Q&A pairs from review content
+   * @param {string} content - Review content
+   * @returns {Array} Array of {questionId, question, answer, riskArea, riskAreaName}
+   */
+  parseQAPairs(content) {
+    const pairs = [];
+    const lines = content.split('\n');
+
+    let currentRiskArea = '';
+    let currentRiskAreaName = '';
+    let currentQuestion = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Match risk area header (e.g., "**Data Privacy Risk:** 8/8 questions answered")
+      const riskAreaMatch = line.match(/\*\*(.+?Risk):\*\*\s*\d+\/\d+\s*questions?\s*answered/i);
+      if (riskAreaMatch) {
+        currentRiskAreaName = riskAreaMatch[1].trim();
+        // Convert name to ID (e.g., "Data Privacy Risk" -> "data_privacy")
+        currentRiskArea = currentRiskAreaName
+          .toLowerCase()
+          .replace(/\s+risk$/i, '')
+          .replace(/\s+/g, '_');
+        continue;
+      }
+
+      // Match question line (e.g., "• **Q (DP-01):** Question text..." or "• **Q (C8 Q 3.01):** Question text...")
+      // Pattern matches both simple (AI-04, IP-01) and complex (C8 Q 3.01, D1 Q 4.01) formats
+      const questionMatch = line.match(/^[•·]\s*\*\*Q\s*\(([A-Z0-9 Q.-]+)\):\*\*\s*(.+)$/i);
+      if (questionMatch) {
+        if (currentQuestion) {
+          // Save previous question before starting new one
+          pairs.push(currentQuestion);
+        }
+        currentQuestion = {
+          questionId: questionMatch[1],
+          question: questionMatch[2].trim(),
+          answer: '',
+          riskArea: currentRiskArea,
+          riskAreaName: currentRiskAreaName
+        };
+        continue;
+      }
+
+      // Match answer line (e.g., "  **A:** Answer text")
+      const answerMatch = line.match(/^\s*\*\*A:\*\*\s*(.+)$/i);
+      if (answerMatch && currentQuestion) {
+        currentQuestion.answer = answerMatch[1].trim();
+        // Save the completed Q&A pair
+        pairs.push(currentQuestion);
+        currentQuestion = null;
+        continue;
+      }
+    }
+
+    // Save last question if exists
+    if (currentQuestion) {
+      pairs.push(currentQuestion);
+    }
+
+    return pairs;
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   * @param {string} text - Text to escape
+   * @returns {string} Escaped text
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   /**
